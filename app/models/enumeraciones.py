@@ -52,6 +52,7 @@ class AccionBitacora(str, enum.Enum):
     ALTA = "ALTA"
     BAJA = "BAJA"
     MODIFICACION = "MODIFICACION"
+    ANULACION = "ANULACION"
 
 
 class EntidadBitacora(str, enum.Enum):
@@ -59,3 +60,6 @@ class EntidadBitacora(str, enum.Enum):
     PRODUCTO = "PRODUCTO"
     CLIENTE = "CLIENTE"
     USUARIO = "USUARIO"
+    COMPRA = "COMPRA"
+    PAGO = "PAGO"
+    ESTADO_CUENTA = "ESTADO_CUENTA"
