@@ -1,7 +1,7 @@
-from datetime import date, datetime
+from datetime import date, datetime, time
 from decimal import Decimal
 from typing import TYPE_CHECKING
-from sqlalchemy import Boolean, Date, DateTime, ForeignKey, Integer, Numeric, String, func
+from sqlalchemy import Boolean, Date, DateTime, ForeignKey, Integer, Numeric, String, Time, func, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base import Base
 from app.models.enumeraciones import TipoTasa
@@ -56,6 +56,7 @@ class CondicionCredito(Base):
     limite_credito: Mapped[Decimal] = mapped_column(Numeric(12, 2))
     max_meses: Mapped[int] = mapped_column(Integer)
     dia_corte: Mapped[int] = mapped_column(Integer)
+    hora_corte: Mapped[time] = mapped_column(Time, default=time(0, 0), server_default=text("'00:00:00'"))
     dia_pago: Mapped[int] = mapped_column(Integer)
     vigente_desde: Mapped[date] = mapped_column(Date)
     vigente_hasta: Mapped[date | None] = mapped_column(Date)
