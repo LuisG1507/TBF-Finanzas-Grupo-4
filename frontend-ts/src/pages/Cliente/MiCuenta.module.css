@@ -1,0 +1,10 @@
+/* Los dos extremos del medidor: lo usado y lo disponible */
+.extremos {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--espacio-4);
+  margin-top: 10px;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-texto-secundario);
+}

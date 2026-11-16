@@ -1,0 +1,135 @@
+/*
+  Estilos de tabla. Se usan directamente sobre <table> desde cada página:
+    <div className={tabla.envoltura}><table className={tabla.tabla}>…</table></div>
+*/
+
+.envoltura {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.tabla {
+  width: 100%;
+  min-width: 660px;
+  table-layout: fixed;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+/* Para tablas de pocas columnas, que caben en un teléfono sin desplazarse */
+.angosta {
+  min-width: 520px;
+}
+
+.tabla th {
+  padding: 12px var(--espacio-4);
+  border-bottom: 1px solid var(--color-borde-suave);
+  background: var(--color-superficie-alterna);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-texto-terciario);
+  text-align: left;
+  white-space: nowrap;
+}
+
+.tabla td {
+  padding: 14px var(--espacio-4);
+  border-bottom: 1px solid var(--color-borde-suave);
+  color: var(--color-texto);
+  vertical-align: middle;
+}
+
+.tabla th:first-child,
+.tabla td:first-child {
+  padding-left: var(--espacio-5);
+}
+
+.tabla th:last-child,
+.tabla td:last-child {
+  padding-right: var(--espacio-5);
+}
+
+.tabla tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.tabla tbody tr {
+  transition: background var(--transicion);
+}
+
+.tabla tbody tr:hover {
+  background: var(--color-superficie-alterna);
+}
+
+/* Columnas de montos y números: a la derecha y con cifras de ancho fijo para que alineen */
+.tabla .numerica {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* Códigos y documentos (RUC, DNI): cifras de ancho fijo, sin partir en dos líneas */
+.cifras {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* Tablas con muchas columnas: se desplazan de lado antes de apretarse */
+.amplia {
+  min-width: 900px;
+}
+
+.fuerte {
+  font-weight: 600;
+}
+
+.sinCorte {
+  white-space: nowrap;
+}
+
+.celdaSecundaria {
+  margin-top: 1px;
+  font-size: 12.5px;
+  color: var(--color-texto-secundario);
+}
+
+.tabla td.celdaSecundaria {
+  margin-top: 0;
+}
+
+/* Celda con avatar + nombre + dato secundario */
+.identidad {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.identidadTexto {
+  min-width: 0;
+}
+
+.identidadTexto > * {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.celdaAcciones {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--espacio-2);
+}
+
+.grupoInsignias {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.vacio {
+  padding: var(--espacio-7) var(--espacio-4);
+  font-size: 14px;
+  color: var(--color-texto-terciario);
+  text-align: center;
+}

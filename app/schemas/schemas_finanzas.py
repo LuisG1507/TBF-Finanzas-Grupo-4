@@ -173,3 +173,41 @@ class RespuestaConversionTasa(BaseModel):
     m_destino: Decimal | None
     tasa_puente_pct: Decimal
     tasa_resultado_pct: Decimal
+
+
+# --- Metodo frances ---
+
+class EntradaFrances(BaseModel):
+    capital: Decimal = Field(gt=0, decimal_places=2, examples=["1000.00"])
+    tipo_tasa: TipoTasa = Field(examples=["NOMINAL"])
+    tasa_pct: Decimal = Field(gt=0, decimal_places=4, examples=["24.0000"])
+    plazo_tasa: PeriodoODias = Field(examples=["ANUAL", 236])
+    capitalizacion: PeriodoODias | None = Field(default=None, examples=["MENSUAL"])
+    periodo_pago: PeriodoODias = Field(default=Periodo.MENSUAL, examples=["MENSUAL", "SEMESTRAL"])
+    num_cuotas: int = Field(gt=0, examples=[3])
+    dias_gracia: int = Field(default=0, ge=0, examples=[11])
+
+    @model_validator(mode="after")
+    def exigir_capitalizacion_si_es_nominal(self):
+        if self.tipo_tasa == TipoTasa.NOMINAL and self.capitalizacion is None:
+            raise ValueError("capitalizacion es obligatoria cuando tipo_tasa es NOMINAL")
+        return self
+
+
+class FilaCronograma(BaseModel):
+    numero: int
+    saldo_inicial: Decimal
+    interes: Decimal
+    amortizacion: Decimal
+    cuota: Decimal
+    saldo_final: Decimal
+
+
+class RespuestaFrances(BaseModel):
+    tep_pct: Decimal
+    capital_capitalizado: Decimal
+    interes_gracia: Decimal
+    cuota: Decimal
+    interes_total: Decimal
+    total_a_pagar: Decimal
+    cronograma: list[FilaCronograma]

@@ -1,0 +1,243 @@
+/*
+  El marco de la aplicación.
+    escenario → el fondo con degradado (lo pinta body::before, ver global.css)
+    marco     → el rectángulo redondeado y translúcido que lo contiene todo
+    lateral   → la barra lateral flotante
+    panel     → barra superior + contenido de la página
+*/
+
+.escenario {
+  min-height: 100dvh;
+  padding: var(--margen-escenario);
+}
+
+.marco {
+  display: grid;
+  grid-template-columns: var(--ancho-barra-lateral) minmax(0, 1fr);
+  max-width: 1560px;
+  min-height: calc(100dvh - 2 * var(--margen-escenario));
+  margin: 0 auto;
+  border: 1px solid var(--color-marco-borde);
+  border-radius: var(--radio-xl);
+  background: var(--color-marco);
+  box-shadow: var(--sombra-marco);
+}
+
+.lateral {
+  position: sticky;
+  top: var(--margen-escenario);
+  align-self: start;
+  height: calc(100dvh - 2 * var(--margen-escenario) - 2px);
+  padding: 12px 0 12px 12px;
+}
+
+.velo,
+.barraMovil {
+  display: none;
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-6);
+  min-width: 0;
+  padding: 30px 36px 44px;
+}
+
+/* ---------- Barra superior ---------- */
+
+.encabezado {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--espacio-4) var(--espacio-5);
+  flex-wrap: wrap;
+}
+
+.titulos {
+  min-width: 0;
+}
+
+.antetitulo {
+  margin-bottom: 4px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-acento);
+}
+
+.titulo {
+  font-size: 32px;
+  font-weight: 700;
+  letter-spacing: -0.028em;
+  line-height: 1.15;
+}
+
+.subtitulo {
+  margin-top: 6px;
+  max-width: 62ch;
+  font-size: 15px;
+  color: var(--color-texto-secundario);
+}
+
+.herramientas {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-4);
+  flex-wrap: wrap;
+}
+
+.acciones {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-3);
+  flex-wrap: wrap;
+}
+
+.contenido {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-5);
+}
+
+/* ---------- Pantallas medianas: la barra lateral pasa a riel de íconos ---------- */
+
+@media (min-width: 861px) and (max-width: 1180px) {
+  .marco {
+    grid-template-columns: var(--ancho-barra-riel) minmax(0, 1fr);
+  }
+
+  .panel {
+    padding: 26px 28px 40px;
+  }
+}
+
+/* ---------- Teléfono: la barra lateral se vuelve un menú deslizable ---------- */
+
+@media (max-width: 860px) {
+  .escenario {
+    padding: 0;
+  }
+
+  .marco {
+    display: block;
+    min-height: 100dvh;
+    border: none;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .lateral {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 60;
+    width: min(304px, 86vw);
+    height: 100dvh;
+    padding: 10px;
+    visibility: hidden;
+    transform: translateX(-104%);
+    transition:
+      transform var(--transicion-lenta),
+      visibility 0s linear 340ms;
+  }
+
+  .lateralAbierto {
+    visibility: visible;
+    transform: translateX(0);
+    transition:
+      transform var(--transicion-lenta),
+      visibility 0s;
+  }
+
+  .velo {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    padding: 0;
+    border: none;
+    background: var(--color-velo);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--transicion-lenta);
+  }
+
+  .veloVisible {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .panel {
+    gap: var(--espacio-5);
+    padding: 0 var(--espacio-4) calc(var(--espacio-6) + env(safe-area-inset-bottom));
+  }
+
+  .barraMovil {
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    display: flex;
+    align-items: center;
+    gap: var(--espacio-3);
+    margin: 0 calc(-1 * var(--espacio-4));
+    padding: 10px var(--espacio-4);
+    border-bottom: 1px solid var(--color-borde-suave);
+    background: var(--color-barra-movil);
+    backdrop-filter: blur(22px) saturate(170%);
+    -webkit-backdrop-filter: blur(22px) saturate(170%);
+  }
+
+  .botonMenu {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+    width: 40px;
+    height: 40px;
+    border: 1px solid var(--color-borde-suave);
+    border-radius: 50%;
+    background: var(--color-superficie);
+    color: var(--color-texto);
+    cursor: pointer;
+  }
+
+  .marcaMovil {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .temaEscritorio {
+    display: none;
+  }
+
+  .encabezado {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .titulo {
+    font-size: 27px;
+  }
+
+  .subtitulo {
+    font-size: 14.5px;
+  }
+
+  .herramientas,
+  .acciones {
+    width: 100%;
+  }
+
+  .acciones > * {
+    flex: 1;
+  }
+}

@@ -1,0 +1,74 @@
+.bloque {
+  margin-top: var(--espacio-5);
+}
+
+/* El estado de cuenta que se va a pagar, en un recuadro hundido */
+.estadoCuenta {
+  margin-top: var(--espacio-5);
+  padding: var(--espacio-4) var(--espacio-5) var(--espacio-5);
+  border: 1px solid var(--color-borde-suave);
+  border-radius: var(--radio-m);
+  background: var(--color-superficie-alterna);
+}
+
+.estadoCuentaCabecera {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espacio-3);
+  margin-bottom: var(--espacio-4);
+}
+
+.estadoCuentaTitulo {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.aplicacion {
+  margin: 0;
+  padding-left: 18px;
+  font-variant-numeric: tabular-nums;
+}
+
+.explicacion {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--color-suave-texto-secundario);
+}
+
+.prelacion {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.prelacion li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.prelacionNumero {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--color-acento-suave);
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--color-exito);
+}
+
+@media (max-width: 600px) {
+  .estadoCuenta {
+    padding: var(--espacio-4);
+  }
+}

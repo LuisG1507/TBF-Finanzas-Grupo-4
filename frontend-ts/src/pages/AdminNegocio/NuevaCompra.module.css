@@ -1,0 +1,196 @@
+/* Condiciones del cliente elegido, en una línea de datos cortos */
+.condiciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: var(--espacio-4) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.condiciones li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 30px;
+  padding: 0 12px;
+  border-radius: var(--radio-pill);
+  background: var(--color-neutro-suave);
+  font-size: 13px;
+  color: var(--color-texto-secundario);
+}
+
+/* Fila para agregar un producto: producto · cantidad · botón */
+.agregar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 150px auto;
+  gap: var(--espacio-3);
+  align-items: start;
+}
+
+/* El botón se alinea con los campos, no con sus etiquetas */
+.botonAgregar {
+  min-height: 44px;
+  margin-top: 26px;
+}
+
+.carrito {
+  display: flex;
+  flex-direction: column;
+  margin: var(--espacio-5) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.linea {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-4);
+  padding: 12px 0;
+  border-top: 1px solid var(--color-borde-suave);
+}
+
+.linea:last-child {
+  padding-bottom: 0;
+}
+
+.lineaTexto {
+  flex: 1;
+  min-width: 0;
+}
+
+.lineaNombre {
+  overflow: hidden;
+  font-size: 14px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lineaDetalle {
+  font-size: 12.5px;
+  color: var(--color-texto-secundario);
+}
+
+.lineaSubtotal {
+  flex: none;
+  font-size: 14px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.quitar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 50%;
+  background: var(--color-superficie-hundida);
+  color: var(--color-texto-secundario);
+  cursor: pointer;
+  transition:
+    background var(--transicion),
+    color var(--transicion);
+}
+
+.quitar:hover {
+  background: var(--color-peligro-suave);
+  color: var(--color-peligro);
+}
+
+/* ---------- Forma de pago: dos opciones grandes ---------- */
+
+.modalidades {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--espacio-3);
+}
+
+.modalidades + * {
+  margin-top: var(--espacio-4);
+}
+
+.modalidad {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radio-m);
+  background: var(--color-entrada);
+  cursor: pointer;
+  transition:
+    border-color var(--transicion),
+    box-shadow var(--transicion),
+    background var(--transicion);
+}
+
+.modalidad input {
+  flex: none;
+  width: 17px;
+  height: 17px;
+  margin: 2px 0 0;
+}
+
+.modalidad:has(input:checked) {
+  border-color: var(--color-acento);
+  background: var(--color-acento-suave);
+  box-shadow: 0 0 0 3px var(--color-anillo);
+}
+
+.modalidad:has(input:disabled) {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.modalidadTitulo,
+.modalidadTexto {
+  display: block;
+}
+
+.modalidadTitulo {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.modalidadTexto {
+  margin-top: 2px;
+  font-size: 12.5px;
+  color: var(--color-texto-secundario);
+}
+
+.cuotas {
+  max-width: 280px;
+}
+
+/* ---------- Resumen ---------- */
+
+.uso {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: var(--espacio-5) 0;
+}
+
+@media (max-width: 600px) {
+  .agregar {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .botonAgregar {
+    width: 100%;
+    margin-top: 0;
+  }
+
+  .modalidades {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .cuotas {
+    max-width: none;
+  }
+}

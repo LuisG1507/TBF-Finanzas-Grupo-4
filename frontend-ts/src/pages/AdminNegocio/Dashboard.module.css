@@ -1,0 +1,135 @@
+/* Fila de indicadores: 4 en escritorio, 2 × 2 en tableta, una columna en el teléfono */
+.indicadores {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--espacio-4);
+}
+
+/* Las tarjetas grandes ocupan dos de las tres columnas */
+.rejilla {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--espacio-4);
+  align-items: start;
+}
+
+.ancha {
+  grid-column: span 2;
+}
+
+.tablaCobranza {
+  margin: 0 calc(-1 * var(--espacio-5)) calc(-1 * var(--espacio-5));
+  border-top: 1px solid var(--color-borde-suave);
+}
+
+.enlace {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 32px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--color-acento);
+  text-decoration: none;
+}
+
+.enlace:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* Fecha de vencimiento, debajo del chip de estado */
+.vencimiento {
+  margin-top: 5px;
+}
+
+/* ---------- Tarjeta verde claro con la cifra grande ---------- */
+
+.cifra {
+  display: flex;
+  flex-direction: column;
+  align-self: stretch;
+  min-height: 300px;
+}
+
+.cifraCabecera {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espacio-3);
+}
+
+.cifraEtiqueta {
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.cifraIcono {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 11px;
+  background: var(--color-suave-pista);
+}
+
+/* La única cifra "héroe" de la pantalla */
+.cifraValor {
+  margin-top: var(--espacio-5);
+  font-size: 68px;
+  font-weight: 700;
+  letter-spacing: -0.045em;
+  line-height: 1;
+}
+
+.cifraTexto {
+  margin-top: var(--espacio-3);
+  max-width: 30ch;
+  font-size: 14px;
+  color: var(--color-suave-texto-secundario);
+}
+
+.cifraPie {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: auto;
+  padding-top: var(--espacio-5);
+}
+
+.cifraNota {
+  font-size: 12.5px;
+  color: var(--color-suave-texto-secundario);
+}
+
+@media (max-width: 1320px) {
+  .indicadores {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 1040px) {
+  .rejilla {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .ancha {
+    grid-column: auto;
+  }
+
+  .cifra {
+    min-height: 0;
+  }
+}
+
+@media (max-width: 560px) {
+  .indicadores {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .cifraValor {
+    font-size: 56px;
+  }
+}

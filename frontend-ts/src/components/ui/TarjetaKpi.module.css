@@ -1,0 +1,113 @@
+.kpi {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 20px 22px;
+}
+
+.cabecera {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espacio-3);
+}
+
+.etiqueta {
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--color-texto-secundario);
+}
+
+.icono {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 34px;
+  height: 34px;
+  border-radius: 11px;
+  background: var(--color-acento-suave);
+  color: var(--color-exito);
+}
+
+/* Cifra grande con las cifras proporcionales de la fuente (las de ancho fijo son para columnas) */
+.valor {
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+  white-space: nowrap;
+}
+
+/* La variación ocupa su propia línea: así nunca choca con las mini-barras */
+.variacion {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  gap: 3px;
+  max-width: 100%;
+  height: 22px;
+  padding: 0 8px 0 6px;
+  border-radius: var(--radio-pill);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.variacionIcono {
+  flex: none;
+}
+
+.variacionTexto {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.favorable {
+  background: var(--color-exito-suave);
+  color: var(--color-exito);
+}
+
+.desfavorable {
+  background: var(--color-peligro-suave);
+  color: var(--color-peligro);
+}
+
+.neutro {
+  background: var(--color-neutro-suave);
+  color: var(--color-neutro);
+}
+
+/* Pie: el detalle a la izquierda y la tendencia a la derecha, alineados abajo */
+.pie {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--espacio-3);
+  margin-top: auto;
+  padding-top: 2px;
+}
+
+.detalle {
+  min-width: 0;
+  font-size: 12.5px;
+  color: var(--color-texto-terciario);
+}
+
+/* ---------- Variante destacada (verde oscuro) ---------- */
+
+.destacada .etiqueta,
+.destacada .detalle {
+  color: var(--color-destacado-texto-secundario);
+}
+
+.destacada .icono {
+  background: var(--color-destacado-relleno);
+  color: var(--color-destacado-brillo);
+}
+
+.destacada .variacion {
+  background: var(--color-destacado-relleno);
+  color: var(--color-destacado-texto);
+}

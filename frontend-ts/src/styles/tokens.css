@@ -1,0 +1,224 @@
+/*
+  Tokens de diseño. Hay dos temas: claro (por defecto) y oscuro.
+  El tema activo lo marca <html data-tema="claro|oscuro"> (ver contexts/TemaContext.tsx).
+
+  Regla de color: un solo verde de acento, en tres pasos (fuerte / normal / suave).
+  Ámbar y rojo se usan únicamente para estados (por vencer, en mora, errores).
+*/
+
+:root {
+  color-scheme: light;
+
+  --fuente: 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, Helvetica, Arial,
+    sans-serif;
+  --fuente-mono: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, monospace;
+
+  /* Escenario: el fondo de toda la página, con un degradado verde muy suave */
+  --color-fondo: #edf4f0;
+  --fondo-brillo:
+    radial-gradient(62rem 38rem at 6% -10%, rgba(116, 212, 167, 0.46), transparent 62%),
+    radial-gradient(48rem 30rem at 102% 2%, rgba(176, 231, 204, 0.55), transparent 60%),
+    radial-gradient(56rem 36rem at 58% 112%, rgba(190, 234, 213, 0.6), transparent 62%);
+
+  /* Marco redondeado que contiene la barra lateral y el panel */
+  --color-marco: rgba(255, 255, 255, 0.58);
+  --color-marco-borde: rgba(255, 255, 255, 0.85);
+  --sombra-marco: 0 1px 0 rgba(255, 255, 255, 0.7) inset, 0 48px 96px -56px rgba(14, 62, 44, 0.42);
+
+  /* Superficies */
+  --color-superficie: #ffffff;
+  --color-superficie-alterna: #f4f8f5;
+  --color-superficie-hundida: #ecf2ee;
+  --color-superficie-elevada: #ffffff;
+  --color-entrada: #ffffff;
+  --color-borde: rgba(15, 42, 30, 0.16);
+  --color-borde-suave: rgba(15, 42, 30, 0.075);
+
+  /* Texto */
+  --color-texto: #0f1a15;
+  --color-texto-secundario: #55635c;
+  --color-texto-terciario: #626f68;
+
+  /* Acento: un solo verde */
+  --color-acento: #0f7553;
+  --color-acento-solido: #0f7553;
+  --color-acento-solido-hover: #0c6245;
+  --color-sobre-acento: #ffffff;
+  --color-acento-suave: #e1f3ea;
+  --color-acento-suave-hover: #d3ecdf;
+  --color-anillo: rgba(15, 117, 83, 0.26);
+
+  /* Tarjeta destacada (verde oscuro) */
+  --fondo-destacado: linear-gradient(155deg, #11503a 0%, #0c3a2b 52%, #0a2f23 100%);
+  --color-destacado-texto: #ffffff;
+  --color-destacado-texto-secundario: rgba(255, 255, 255, 0.76);
+  --color-destacado-borde: rgba(255, 255, 255, 0.1);
+  --color-destacado-relleno: rgba(255, 255, 255, 0.12);
+  --color-destacado-brillo: #9be5c5;
+  --color-destacado-barra: rgba(255, 255, 255, 0.24);
+
+  /* Tarjeta verde claro (cifra grande) */
+  --fondo-suave: linear-gradient(160deg, #e7f6ee 0%, #d4eee1 100%);
+  --color-suave-borde: rgba(15, 117, 83, 0.14);
+  --color-suave-texto: #0c3a2b;
+  --color-suave-texto-secundario: #2f5c4b;
+  --color-suave-pista: rgba(15, 117, 83, 0.16);
+
+  /* Estados: texto sobre su fondo suave (chips, avisos) */
+  --color-exito: #0b6446;
+  --color-exito-suave: #e1f3ea;
+  --color-alerta: #874f00;
+  --color-alerta-suave: #fcefd9;
+  --color-peligro: #b3261e;
+  --color-peligro-suave: #fde8e6;
+  --color-peligro-suave-hover: #fbd8d5;
+  --color-neutro: #55635c;
+  --color-neutro-suave: #eef2ef;
+
+  /* Estados: marcas de gráficos (segmentos, puntos) */
+  --color-marca-bien: #17916a;
+  --color-marca-aviso: #e0a13a;
+  --color-marca-serio: #e27d4f;
+  --color-marca-critico: #c9342e;
+
+  /* Gráficos */
+  --color-grafico-rejilla: rgba(15, 42, 30, 0.08);
+  --color-grafico-eje: rgba(15, 42, 30, 0.2);
+  --color-grafico-barra: #a5dcc1;
+  --color-grafico-barra-activa: #0f7553;
+  --color-grafico-pista: rgba(15, 42, 30, 0.07);
+  --color-grafico-pista-clave: rgba(15, 42, 30, 0.24);
+  --color-grafico-linea: #17916a;
+
+  /* Barra lateral: oscura en los dos temas, con vidrio esmerilado */
+  --color-barra: rgba(11, 26, 19, 0.9);
+  --color-barra-borde: rgba(255, 255, 255, 0.1);
+  --color-barra-texto: #eaf1ed;
+  --color-barra-texto-secundario: rgba(234, 241, 237, 0.64);
+  --color-barra-item-hover: rgba(255, 255, 255, 0.07);
+  --color-barra-item-activo: rgba(255, 255, 255, 0.12);
+  --color-barra-acento: #7ee2b8;
+  --sombra-barra: 0 28px 56px -32px rgba(6, 30, 20, 0.6);
+
+  /* Barra superior del teléfono (translúcida, se queda fija al desplazar) */
+  --color-barra-movil: rgba(240, 247, 243, 0.8);
+
+  /* Velo de los modales y del menú móvil */
+  --color-velo: rgba(12, 26, 19, 0.38);
+
+  /* Radios */
+  --radio-xs: 8px;
+  --radio-s: 12px;
+  --radio-m: 16px;
+  --radio-l: 24px;
+  --radio-xl: 34px;
+  --radio-pill: 999px;
+
+  /* Espaciado */
+  --espacio-1: 4px;
+  --espacio-2: 8px;
+  --espacio-3: 12px;
+  --espacio-4: 16px;
+  --espacio-5: 24px;
+  --espacio-6: 32px;
+  --espacio-7: 48px;
+  --espacio-8: 64px;
+
+  /* Sombras casi invisibles: la separación la dan los bordes finos */
+  --sombra-baja: 0 1px 2px rgba(15, 42, 30, 0.04);
+  --sombra-media: 0 12px 32px -16px rgba(15, 42, 30, 0.18), 0 1px 2px rgba(15, 42, 30, 0.05);
+  --sombra-alta: 0 32px 72px -24px rgba(10, 36, 25, 0.34), 0 2px 6px rgba(15, 42, 30, 0.06);
+
+  /* Medidas del marco */
+  --ancho-barra-lateral: 264px;
+  --ancho-barra-riel: 88px;
+  --margen-escenario: 20px;
+
+  --transicion: 160ms cubic-bezier(0.25, 0.1, 0.25, 1);
+  --transicion-lenta: 340ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+:root[data-tema='oscuro'] {
+  color-scheme: dark;
+
+  --color-fondo: #060a08;
+  --fondo-brillo:
+    radial-gradient(62rem 38rem at 6% -10%, rgba(32, 138, 96, 0.34), transparent 62%),
+    radial-gradient(48rem 30rem at 102% 2%, rgba(22, 98, 69, 0.26), transparent 60%),
+    radial-gradient(56rem 36rem at 58% 112%, rgba(16, 78, 56, 0.3), transparent 62%);
+
+  --color-marco: rgba(255, 255, 255, 0.03);
+  --color-marco-borde: rgba(255, 255, 255, 0.075);
+  --sombra-marco: 0 1px 0 rgba(255, 255, 255, 0.04) inset, 0 48px 96px -56px rgba(0, 0, 0, 0.7);
+
+  --color-superficie: #131a16;
+  --color-superficie-alterna: #19211c;
+  --color-superficie-hundida: #0e1411;
+  --color-superficie-elevada: #1a231e;
+  --color-entrada: #0f1512;
+  --color-borde: rgba(255, 255, 255, 0.16);
+  --color-borde-suave: rgba(255, 255, 255, 0.075);
+
+  --color-texto: #edf3ef;
+  --color-texto-secundario: #a5b3ab;
+  --color-texto-terciario: #86948c;
+
+  --color-acento: #45d298;
+  --color-acento-solido: #3ccf91;
+  --color-acento-solido-hover: #5adba4;
+  --color-sobre-acento: #04130c;
+  --color-acento-suave: rgba(60, 207, 145, 0.14);
+  --color-acento-suave-hover: rgba(60, 207, 145, 0.2);
+  --color-anillo: rgba(69, 210, 152, 0.36);
+
+  --fondo-destacado: linear-gradient(155deg, #186a4e 0%, #145a43 52%, #114c39 100%);
+  --color-destacado-texto: #ffffff;
+  --color-destacado-texto-secundario: rgba(255, 255, 255, 0.8);
+  --color-destacado-borde: rgba(255, 255, 255, 0.14);
+  --color-destacado-relleno: rgba(255, 255, 255, 0.14);
+  --color-destacado-brillo: #a6ecd0;
+  --color-destacado-barra: rgba(255, 255, 255, 0.26);
+
+  --fondo-suave: linear-gradient(160deg, rgba(60, 207, 145, 0.16) 0%, rgba(60, 207, 145, 0.08) 100%);
+  --color-suave-borde: rgba(60, 207, 145, 0.24);
+  --color-suave-texto: #e9fff4;
+  --color-suave-texto-secundario: #a9d9c4;
+  --color-suave-pista: rgba(60, 207, 145, 0.2);
+
+  --color-exito: #6fe0b0;
+  --color-exito-suave: rgba(60, 207, 145, 0.14);
+  --color-alerta: #f3bd69;
+  --color-alerta-suave: rgba(240, 181, 88, 0.15);
+  --color-peligro: #ff8f87;
+  --color-peligro-suave: rgba(255, 123, 114, 0.15);
+  --color-peligro-suave-hover: rgba(255, 123, 114, 0.22);
+  --color-neutro: #a5b3ab;
+  --color-neutro-suave: rgba(255, 255, 255, 0.07);
+
+  --color-marca-bien: #45d298;
+  --color-marca-aviso: #e8ad4f;
+  --color-marca-serio: #ec835a;
+  --color-marca-critico: #f0625a;
+
+  --color-grafico-rejilla: rgba(255, 255, 255, 0.07);
+  --color-grafico-eje: rgba(255, 255, 255, 0.2);
+  --color-grafico-barra: #2f7458;
+  --color-grafico-barra-activa: #45d298;
+  --color-grafico-pista: rgba(255, 255, 255, 0.07);
+  --color-grafico-pista-clave: rgba(255, 255, 255, 0.28);
+  --color-grafico-linea: #45d298;
+
+  --color-barra: rgba(24, 33, 28, 0.66);
+  --color-barra-borde: rgba(255, 255, 255, 0.09);
+  --color-barra-item-hover: rgba(255, 255, 255, 0.06);
+  --color-barra-item-activo: rgba(255, 255, 255, 0.1);
+  --sombra-barra: 0 28px 56px -32px rgba(0, 0, 0, 0.8);
+
+  --color-barra-movil: rgba(9, 14, 11, 0.76);
+
+  --color-velo: rgba(0, 0, 0, 0.62);
+
+  --sombra-baja: 0 1px 0 rgba(255, 255, 255, 0.03) inset;
+  --sombra-media: 0 16px 36px -18px rgba(0, 0, 0, 0.7), 0 1px 0 rgba(255, 255, 255, 0.04) inset;
+  --sombra-alta: 0 32px 72px -24px rgba(0, 0, 0, 0.85), 0 1px 0 rgba(255, 255, 255, 0.05) inset;
+}

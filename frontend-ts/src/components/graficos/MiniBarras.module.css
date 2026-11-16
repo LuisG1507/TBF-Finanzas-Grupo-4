@@ -1,0 +1,28 @@
+.miniBarras {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  flex: none;
+  height: 34px;
+}
+
+.barra {
+  width: 7px;
+  border-radius: 4px 4px 1.5px 1.5px;
+  background: var(--color-grafico-barra);
+  opacity: 0.75;
+}
+
+.actual {
+  background: var(--color-grafico-barra-activa);
+  opacity: 1;
+}
+
+.sobreOscuro .barra {
+  background: var(--color-destacado-barra);
+  opacity: 1;
+}
+
+.sobreOscuro .actual {
+  background: var(--color-destacado-brillo);
+}
