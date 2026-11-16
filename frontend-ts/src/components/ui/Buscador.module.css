@@ -1,0 +1,53 @@
+.buscador {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 260px;
+  max-width: 100%;
+  min-height: 38px;
+  padding: 0 14px;
+  border: 1px solid var(--color-borde-suave);
+  border-radius: var(--radio-pill);
+  background: var(--color-superficie-hundida);
+  cursor: text;
+  transition:
+    border-color var(--transicion),
+    box-shadow var(--transicion),
+    background var(--transicion);
+}
+
+.buscador:focus-within {
+  border-color: var(--color-acento);
+  background: var(--color-entrada);
+  box-shadow: 0 0 0 4px var(--color-anillo);
+}
+
+.icono {
+  flex: none;
+  color: var(--color-texto-terciario);
+}
+
+.entrada {
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  font-size: 14px;
+  outline: none;
+}
+
+.entrada::placeholder {
+  color: var(--color-texto-terciario);
+}
+
+/* La "x" para borrar que agrega el navegador no combina con el tema oscuro */
+.entrada::-webkit-search-cancel-button {
+  appearance: none;
+}
+
+@media (max-width: 600px) {
+  .buscador {
+    width: 100%;
+  }
+}

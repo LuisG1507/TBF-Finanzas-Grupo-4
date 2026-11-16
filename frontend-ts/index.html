@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#edf4f0" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <title>Créditos de barrio</title>
+    <script>
+      // Aplica el tema guardado antes de pintar la página, para que no parpadee
+      // (la misma lógica vive en src/contexts/tema.ts).
+      ;(function () {
+        var preferencia = 'sistema'
+        try {
+          var guardada = localStorage.getItem('tbf-tema')
+          if (guardada === 'claro' || guardada === 'oscuro') preferencia = guardada
+        } catch (error) {
+          // almacenamiento no disponible: se sigue con el tema del sistema
+        }
+        var oscuro =
+          preferencia === 'oscuro' ||
+          (preferencia === 'sistema' && window.matchMedia('(prefers-color-scheme: dark)').matches)
+        document.documentElement.dataset.tema = oscuro ? 'oscuro' : 'claro'
+      })()
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

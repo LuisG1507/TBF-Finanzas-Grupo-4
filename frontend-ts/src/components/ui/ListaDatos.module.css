@@ -1,0 +1,42 @@
+.lista {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.fila {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--espacio-4);
+  font-size: 14px;
+  color: var(--color-texto-secundario);
+}
+
+.fila dd {
+  font-variant-numeric: tabular-nums;
+  color: var(--color-texto);
+  text-align: right;
+  white-space: nowrap;
+}
+
+.enfasis {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--color-texto);
+}
+
+.enfasis dd {
+  font-weight: 700;
+}
+
+.peligro,
+.peligro dd {
+  color: var(--color-peligro);
+}
+
+.separada {
+  margin-top: 4px;
+  padding-top: 14px;
+  border-top: 1px solid var(--color-borde-suave);
+}

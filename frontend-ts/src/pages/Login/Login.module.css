@@ -1,0 +1,222 @@
+.escenario {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: 100dvh;
+  padding: 76px var(--margen-escenario) var(--margen-escenario);
+}
+
+.tema {
+  position: absolute;
+  top: var(--margen-escenario);
+  right: var(--margen-escenario);
+}
+
+/* El mismo marco translúcido de la aplicación, en pequeño */
+.marco {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+  gap: 12px;
+  width: 100%;
+  max-width: 980px;
+  padding: 12px;
+  border: 1px solid var(--color-marco-borde);
+  border-radius: var(--radio-xl);
+  background: var(--color-marco);
+  box-shadow: var(--sombra-marco);
+}
+
+/* ---------- Panel de presentación: mismo vidrio oscuro que la barra lateral ---------- */
+
+.presentacion {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 580px;
+  padding: 28px;
+  overflow: hidden;
+  border: 1px solid var(--color-barra-borde);
+  border-radius: 26px;
+  background: var(--color-barra);
+  color: var(--color-barra-texto);
+  box-shadow:
+    var(--sombra-barra),
+    0 1px 0 rgba(255, 255, 255, 0.07) inset;
+  backdrop-filter: blur(28px) saturate(170%);
+  -webkit-backdrop-filter: blur(28px) saturate(170%);
+}
+
+/* Resplandor verde en la esquina, puramente decorativo */
+.presentacion::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(30rem 22rem at 112% 112%, rgba(63, 211, 154, 0.34), transparent 62%);
+  pointer-events: none;
+}
+
+.marca {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.marcaIcono {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 13px;
+  background: linear-gradient(150deg, #3fd39a 0%, #14835d 100%);
+  color: #04130c;
+  box-shadow:
+    0 8px 18px -8px rgba(63, 211, 154, 0.75),
+    0 1px 0 rgba(255, 255, 255, 0.35) inset;
+}
+
+.marcaNombre {
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.mensaje {
+  position: relative;
+  z-index: 1;
+  margin-top: auto;
+}
+
+.lema {
+  max-width: 13ch;
+  font-size: 40px;
+  font-weight: 700;
+  letter-spacing: -0.035em;
+  line-height: 1.06;
+}
+
+.bajada {
+  max-width: 36ch;
+  margin-top: var(--espacio-4);
+  font-size: 15px;
+  color: var(--color-barra-texto-secundario);
+}
+
+.ventajas {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: var(--espacio-6) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ventajas li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.ventajaIcono {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 34px;
+  height: 34px;
+  border-radius: 11px;
+  background: rgba(255, 255, 255, 0.09);
+  color: var(--color-barra-acento);
+}
+
+/* ---------- Formulario ---------- */
+
+.acceso {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: var(--espacio-6) var(--espacio-6);
+}
+
+.titulo {
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: -0.028em;
+  line-height: 1.15;
+}
+
+.subtitulo {
+  margin-top: 6px;
+  font-size: 15px;
+  color: var(--color-texto-secundario);
+}
+
+.formulario {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-4);
+  margin-top: var(--espacio-6);
+}
+
+.botonEntrar {
+  min-height: 46px;
+  margin-top: var(--espacio-2);
+  font-size: 15px;
+}
+
+.descripcionPerfil {
+  margin-top: var(--espacio-5);
+  padding-top: var(--espacio-4);
+  border-top: 1px solid var(--color-borde-suave);
+  font-size: 13px;
+  color: var(--color-texto-secundario);
+}
+
+@media (max-width: 860px) {
+  .escenario {
+    place-items: start center;
+    padding: 68px var(--espacio-3) var(--espacio-3);
+  }
+
+  .tema {
+    top: var(--espacio-3);
+    right: var(--espacio-3);
+  }
+
+  .marco {
+    grid-template-columns: minmax(0, 1fr);
+    max-width: 520px;
+    padding: 10px;
+    border-radius: 30px;
+  }
+
+  .presentacion {
+    min-height: 0;
+    padding: 22px;
+    border-radius: 22px;
+  }
+
+  .mensaje {
+    margin-top: var(--espacio-6);
+  }
+
+  .lema {
+    max-width: none;
+    font-size: 30px;
+  }
+
+  /* En el teléfono el formulario tiene que quedar a la vista: la lista de ventajas se omite */
+  .ventajas {
+    display: none;
+  }
+
+  .acceso {
+    padding: var(--espacio-5) var(--espacio-4) var(--espacio-4);
+  }
+
+  .titulo {
+    font-size: 26px;
+  }
+}

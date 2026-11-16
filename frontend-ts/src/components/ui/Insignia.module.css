@@ -1,0 +1,40 @@
+.insignia {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 24px;
+  padding: 0 10px;
+  border-radius: var(--radio-pill);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.punto {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  flex: none;
+}
+
+.neutro {
+  background: var(--color-neutro-suave);
+  color: var(--color-neutro);
+}
+
+.exito {
+  background: var(--color-exito-suave);
+  color: var(--color-exito);
+}
+
+.alerta {
+  background: var(--color-alerta-suave);
+  color: var(--color-alerta);
+}
+
+.peligro {
+  background: var(--color-peligro-suave);
+  color: var(--color-peligro);
+}

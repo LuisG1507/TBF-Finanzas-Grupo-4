@@ -1,0 +1,42 @@
+.campo {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  min-width: 0;
+}
+
+.etiqueta {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-texto);
+}
+
+.obligatorio {
+  color: var(--color-peligro);
+}
+
+.ayuda,
+.error {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+
+.ayuda {
+  color: var(--color-texto-secundario);
+}
+
+.error {
+  color: var(--color-peligro);
+}
+
+.iconoNota {
+  flex: none;
+  margin-top: 2px;
+}
+
+.ayuda .iconoNota {
+  color: var(--color-texto-terciario);
+}

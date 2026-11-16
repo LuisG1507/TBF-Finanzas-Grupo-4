@@ -1,0 +1,41 @@
+.pista {
+  width: 100%;
+  height: 8px;
+  border-radius: var(--radio-pill);
+  overflow: hidden;
+}
+
+.relleno {
+  height: 100%;
+  min-width: 8px;
+  border-radius: var(--radio-pill);
+  transition: width var(--transicion-lenta);
+}
+
+.acento {
+  background: var(--color-acento-suave);
+}
+
+.acento .relleno {
+  background: var(--color-marca-bien);
+}
+
+.alerta {
+  background: var(--color-alerta-suave);
+}
+
+.alerta .relleno {
+  background: var(--color-marca-aviso);
+}
+
+.peligro {
+  background: var(--color-peligro-suave);
+}
+
+.peligro .relleno {
+  background: var(--color-marca-critico);
+}
+
+.sobreSuave {
+  background: var(--color-suave-pista);
+}

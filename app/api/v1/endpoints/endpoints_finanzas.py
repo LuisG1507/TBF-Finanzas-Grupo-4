@@ -1,8 +1,10 @@
+from dataclasses import asdict
 from decimal import Decimal
 
 from fastapi import APIRouter, HTTPException
 
 from app.schemas import schemas_finanzas as esquemas
+from app.services.finance import finance_amortizacion as amortizacion
 from app.services.finance import finance_tasas as tasas
 
 router = APIRouter(prefix="/finanzas", tags=["Calculadora financiera"])
@@ -152,3 +154,21 @@ def conversion_tasas(datos: esquemas.EntradaConversionTasa):
         tasa_puente_pct=puente,
         tasa_resultado_pct=resultado,
     )
+
+
+# --- Metodo frances: R = C' * TEP * (1+TEP)^n / ((1+TEP)^n - 1) ---
+
+@router.post("/frances", response_model=esquemas.RespuestaFrances, summary="Cronograma por metodo frances, con gracia total en dias")
+def cronograma_frances(datos: esquemas.EntradaFrances):
+    nominal = datos.tipo_tasa == tasas.TipoTasa.NOMINAL
+    plan = amortizacion.calcular_plan_frances(
+        capital=datos.capital,
+        tasa_pct=datos.tasa_pct,
+        tipo=datos.tipo_tasa,
+        plazo_tasa_dias=_dias(datos.plazo_tasa),
+        capitalizacion_dias=_dias(datos.capitalizacion) if nominal else None,
+        periodo_pago_dias=_dias(datos.periodo_pago),
+        num_cuotas=datos.num_cuotas,
+        dias_gracia=datos.dias_gracia,
+    )
+    return esquemas.RespuestaFrances(**asdict(plan))

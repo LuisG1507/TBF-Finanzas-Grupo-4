@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+  <defs>
+    <linearGradient id="verde" x1="8" y1="2" x2="40" y2="46" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#3fd39a" />
+      <stop offset="1" stop-color="#14835d" />
+    </linearGradient>
+  </defs>
+  <rect width="48" height="48" rx="13" fill="url(#verde)" />
+  <!-- El mismo cuaderno de la marca (components/ui/Icono.tsx → "cuaderno") -->
+  <g
+    transform="translate(4.5 4.5) scale(1.625)"
+    fill="none"
+    stroke="#04130c"
+    stroke-width="1.9"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  >
+    <rect x="5.5" y="3.5" width="13.5" height="17" rx="2.6" />
+    <path d="M9 3.5v17" />
+    <path d="M12 9.5l1.8 1.8 3-3.3M12.2 15.5h4.3" />
+  </g>
+</svg>

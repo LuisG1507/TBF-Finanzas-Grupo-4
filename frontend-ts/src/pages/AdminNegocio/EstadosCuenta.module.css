@@ -1,0 +1,132 @@
+/* Cabecera de cada estado de cuenta: es un botón que abre y cierra el detalle */
+.cabecera {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espacio-3) var(--espacio-5);
+  flex-wrap: wrap;
+  width: 100%;
+  padding: var(--espacio-4) var(--espacio-5);
+  border: none;
+  border-radius: var(--radio-l);
+  background: none;
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--transicion);
+}
+
+.cabecera:hover {
+  background: var(--color-superficie-alterna);
+}
+
+.cabecera:focus-visible {
+  outline-offset: -3px;
+}
+
+.quien {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.quienTexto {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.nombre {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+}
+
+.fechas {
+  font-size: 12.5px;
+  color: var(--color-texto-secundario);
+}
+
+.resumen {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-4);
+  margin-left: auto;
+}
+
+.total {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.totalEtiqueta {
+  font-size: 12px;
+  color: var(--color-texto-terciario);
+}
+
+.totalValor {
+  font-size: 17px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+.flecha {
+  flex: none;
+  color: var(--color-texto-terciario);
+  transition: transform var(--transicion);
+}
+
+.flechaArriba {
+  transform: rotate(180deg);
+}
+
+.detalle {
+  border-top: 1px solid var(--color-borde-suave);
+}
+
+/* Los tres totales, en una franja sobre la tabla */
+.totales {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espacio-4) var(--espacio-7);
+  padding: var(--espacio-4) var(--espacio-5);
+}
+
+.totales dt {
+  font-size: 12px;
+  color: var(--color-texto-terciario);
+}
+
+.totales dd {
+  font-size: 16px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.conMora dd {
+  color: var(--color-peligro);
+}
+
+@media (max-width: 600px) {
+  .cabecera {
+    padding: var(--espacio-4);
+  }
+
+  .resumen {
+    width: 100%;
+    margin-left: 0;
+    justify-content: space-between;
+  }
+
+  .total {
+    align-items: flex-start;
+    margin-right: auto;
+  }
+
+  .totales {
+    padding: var(--espacio-4);
+    gap: var(--espacio-3) var(--espacio-5);
+  }
+}
