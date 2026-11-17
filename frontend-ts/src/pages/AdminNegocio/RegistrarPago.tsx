@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { SIN_CONEXION, consultarExigible, procesarPago, type RespuestaPago } from '../../api/pagos'
 import { Shell } from '../../components/layout/Shell'
 import { Aviso } from '../../components/ui/Aviso'
 import { Boton } from '../../components/ui/Boton'
@@ -13,10 +14,20 @@ import { formatearFecha, formatearSoles } from '../../utils/formato'
 import pagina from '../../styles/pagina.module.css'
 import styles from './RegistrarPago.module.css'
 
-/** El estado de cuenta más antiguo que el cliente todavía no paga. */
-function estadoCuentaPendienteDe(clienteId: number) {
-  return estadosCuentaDemo.find((candidato) => candidato.cliente_id === clienteId && candidato.estado !== 'PAGADO')
+/** El estado de cuenta más antiguo que el cliente todavía no paga (pagados: los cobrados en esta sesión). */
+function estadoCuentaPendienteDe(clienteId: number, pagados: number[] = []) {
+  return estadosCuentaDemo.find(
+    (candidato) => candidato.cliente_id === clienteId && candidato.estado !== 'PAGADO' && !pagados.includes(candidato.id_estado_cuenta),
+  )
 }
+
+/** La fecha de hoy en formato AAAA-MM-DD, en hora local. */
+function hoyIso() {
+  const hoy = new Date()
+  return `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}-${String(hoy.getDate()).padStart(2, '0')}`
+}
+
+const SUBTITULO = 'El pago debe cubrir todo lo adeudado: no se aceptan pagos parciales y el excedente se devuelve.'
 
 /** Orden en que se aplica un pago (Anexo A del enunciado). */
 const PRELACION = ['Interés moratorio', 'Interés compensatorio', 'Capital']
@@ -31,29 +42,80 @@ export function RegistrarPago() {
     () => (clientesActivos.find((candidato) => estadoCuentaPendienteDe(candidato.id_cliente)) ?? clientesActivos[0])?.id_cliente ?? 0,
   )
   const [monto, setMonto] = useState('')
-  const [resultado, setResultado] = useState<'registrado' | 'monto-distinto' | null>(null)
+  const [fechaPago, setFechaPago] = useState(hoyIso)
+  // Lo que el backend calcula para la fecha elegida (mora incluida) y su respuesta al registrar.
+  const [exigible, setExigible] = useState<RespuestaPago | null>(null)
+  const [resultado, setResultado] = useState<RespuestaPago | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [enviando, setEnviando] = useState(false)
+  // Estados de cuenta cobrados en esta sesión; el último es el que se acaba de pagar.
+  const [pagados, setPagados] = useState<number[]>([])
+
+  const cliente = clientesActivos.find((candidato) => candidato.id_cliente === clienteId) ?? clientesActivos[0]
+  // Mientras se muestra el resultado de un pago aceptado, se sigue viendo el estado de cuenta recién pagado.
+  const yaCobrados = resultado?.aceptado ? pagados.slice(0, -1) : pagados
+  const estadoCuenta = cliente ? estadoCuentaPendienteDe(cliente.id_cliente, yaCobrados) : undefined
+  const idEstadoCuenta = estadoCuenta?.id_estado_cuenta
+  const pagoAceptado = resultado?.aceptado === true
+
+  // Cada vez que cambia el cliente o la fecha de pago, el backend recalcula la mora y el total.
+  useEffect(() => {
+    if (!estadoCuenta || !cliente || !fechaPago || pagoAceptado) return
+    let vigente = true
+    consultarExigible(estadoCuenta, cliente.condicion, fechaPago)
+      .then((respuesta) => {
+        if (!vigente) return
+        setExigible(respuesta)
+        setError(null)
+      })
+      .catch(() => {
+        if (!vigente) return
+        setExigible(null)
+        setError(SIN_CONEXION)
+      })
+    return () => {
+      vigente = false
+    }
+    // Solo depende de qué estado de cuenta se paga y en qué fecha.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [idEstadoCuenta, fechaPago, pagoAceptado])
 
   if (clientesActivos.length === 0) {
     return (
-      <Shell titulo="Registrar pago" subtitulo="El pago debe ser por el monto exacto de lo adeudado: no se aceptan pagos parciales.">
+      <Shell titulo="Registrar pago" subtitulo={SUBTITULO}>
         <Aviso tono="info">Todavía no hay clientes activos. Regístralos primero en Clientes.</Aviso>
       </Shell>
     )
   }
 
-  const cliente = clientesActivos.find((candidato) => candidato.id_cliente === clienteId) ?? clientesActivos[0]
-  const estadoCuenta = estadoCuentaPendienteDe(cliente.id_cliente)
-  const totalAPagar = estadoCuenta ? Number(estadoCuenta.total_pagar) : 0
-  const tieneMora = estadoCuenta ? Number(estadoCuenta.total_interes_mora) > 0 : false
+  // La mora y el total salen del backend; sin conexión se muestran los del estado de cuenta emitido.
+  const interesMora = exigible?.interes_mora ?? estadoCuenta?.total_interes_mora ?? '0'
+  const totalAPagar = exigible?.total_exigible ?? estadoCuenta?.total_pagar ?? '0'
+  const tieneMora = Number(interesMora) > 0
 
-  function alRegistrar() {
-    // se compara en céntimos para no depender de decimales de punto flotante
-    const coincideConLoAdeudado = Math.round(Number(monto) * 100) === Math.round(totalAPagar * 100)
-    setResultado(coincideConLoAdeudado ? 'registrado' : 'monto-distinto')
+  function reiniciar() {
+    setMonto('')
+    setResultado(null)
+    setExigible(null)
+  }
+
+  async function alRegistrar() {
+    if (!estadoCuenta) return
+    setEnviando(true)
+    try {
+      const respuesta = await procesarPago(estadoCuenta, cliente.condicion, fechaPago, Number(monto).toFixed(2))
+      setResultado(respuesta)
+      setError(null)
+      if (respuesta.aceptado) setPagados((actuales) => [...actuales, estadoCuenta.id_estado_cuenta])
+    } catch {
+      setError(SIN_CONEXION)
+    } finally {
+      setEnviando(false)
+    }
   }
 
   return (
-    <Shell titulo="Registrar pago" subtitulo="El pago debe ser por el monto exacto de lo adeudado: no se aceptan pagos parciales.">
+    <Shell titulo="Registrar pago" subtitulo={SUBTITULO}>
       <div className={pagina.dosColumnas}>
         <Tarjeta>
           <TarjetaEncabezado titulo="Pago del cliente" />
@@ -64,8 +126,7 @@ export function RegistrarPago() {
               value={cliente.id_cliente}
               onChange={(evento) => {
                 setClienteId(Number(evento.target.value))
-                setMonto('')
-                setResultado(null)
+                reiniciar()
               }}
             >
               {clientesActivos.map((opcion) => (
@@ -88,26 +149,52 @@ export function RegistrarPago() {
               <div className={styles.estadoCuenta}>
                 <div className={styles.estadoCuentaCabecera}>
                   <p className={styles.estadoCuentaTitulo}>Estado de cuenta</p>
-                  <Insignia texto={ESTADO_CUENTA[estadoCuenta.estado].texto} tono={ESTADO_CUENTA[estadoCuenta.estado].tono} />
+                  {pagoAceptado ? (
+                    <Insignia texto={ESTADO_CUENTA.PAGADO.texto} tono={ESTADO_CUENTA.PAGADO.tono} />
+                  ) : (
+                    <Insignia texto={ESTADO_CUENTA[estadoCuenta.estado].texto} tono={ESTADO_CUENTA[estadoCuenta.estado].tono} />
+                  )}
                 </div>
                 <ListaDatos>
                   <FilaDato etiqueta="Fecha de corte" valor={formatearFecha(estadoCuenta.fecha_corte)} />
                   <FilaDato etiqueta="Fecha de pago pactada" valor={formatearFecha(estadoCuenta.fecha_pago)} />
-                  <FilaDato etiqueta="Capital" valor={formatearSoles(estadoCuenta.total_capital)} separada />
-                  <FilaDato etiqueta="Interés compensatorio" valor={formatearSoles(estadoCuenta.total_interes_comp)} />
                   <FilaDato
-                    etiqueta="Interés moratorio"
-                    valor={formatearSoles(estadoCuenta.total_interes_mora)}
+                    etiqueta="Días de mora"
+                    valor={exigible ? String(exigible.dias_mora) : '—'}
                     tono={tieneMora ? 'peligro' : undefined}
                   />
-                  <FilaDato etiqueta="Total a pagar" valor={formatearSoles(estadoCuenta.total_pagar)} enfasis separada />
+                  <FilaDato etiqueta="Capital" valor={formatearSoles(estadoCuenta.total_capital)} separada />
+                  <FilaDato etiqueta="Interés compensatorio" valor={formatearSoles(estadoCuenta.total_interes_comp)} />
+                  <FilaDato etiqueta="Interés moratorio" valor={formatearSoles(interesMora)} tono={tieneMora ? 'peligro' : undefined} />
+                  <FilaDato etiqueta="Total a pagar" valor={formatearSoles(totalAPagar)} enfasis separada />
                 </ListaDatos>
               </div>
 
               <div className={styles.bloque}>
                 <Campo
+                  etiqueta="Fecha en que paga"
+                  ayuda="Si es posterior a la fecha de pago pactada, el sistema calcula los días de mora y suma el interés moratorio al total."
+                  obligatorio
+                  htmlFor="fecha_pago"
+                >
+                  <input
+                    id="fecha_pago"
+                    type="date"
+                    className="campo-entrada"
+                    value={fechaPago}
+                    disabled={pagoAceptado}
+                    onChange={(evento) => {
+                      setFechaPago(evento.target.value)
+                      setResultado(null)
+                    }}
+                  />
+                </Campo>
+              </div>
+
+              <div className={styles.bloque}>
+                <Campo
                   etiqueta="Monto recibido (S/)"
-                  ayuda="Debe coincidir exactamente con el total a pagar. Si el cliente paga después de la fecha pactada, la mora ya está incluida en el total."
+                  ayuda="Debe cubrir el total a pagar, que ya incluye la mora. Si el cliente entrega más, el sistema indica cuánto devolverle."
                   obligatorio
                   htmlFor="monto"
                 >
@@ -118,8 +205,9 @@ export function RegistrarPago() {
                     min="0"
                     inputMode="decimal"
                     className="campo-entrada"
-                    placeholder={Number(estadoCuenta.total_pagar).toFixed(2)}
+                    placeholder={Number(totalAPagar).toFixed(2)}
                     value={monto}
+                    disabled={pagoAceptado}
                     onChange={(evento) => {
                       setMonto(evento.target.value)
                       setResultado(null)
@@ -129,26 +217,37 @@ export function RegistrarPago() {
               </div>
 
               <div className={[styles.bloque, pagina.pila].join(' ')}>
-                {resultado === 'monto-distinto' && (
-                  <Aviso tono="peligro">
-                    El monto no coincide con lo adeudado ({formatearSoles(totalAPagar)}). No se permiten pagos parciales: ingresa el monto
-                    exacto.
+                {error && <Aviso tono="peligro">{error}</Aviso>}
+
+                {resultado && !resultado.aceptado && (
+                  <Aviso tono="peligro" titulo="Pago rechazado">
+                    El monto no cubre lo adeudado ({formatearSoles(resultado.total_exigible)}). No se permiten pagos parciales: faltan{' '}
+                    {formatearSoles(Number(resultado.total_exigible) - Number(monto))}.
                   </Aviso>
                 )}
 
-                {resultado === 'registrado' && (
-                  <Aviso tono="exito" titulo="Pago registrado (demostración). Así se aplicó:">
+                {resultado && resultado.aceptado && (
+                  <Aviso tono="exito" titulo="Pago registrado. Así se aplicó:">
                     <ol className={styles.aplicacion}>
-                      <li>Interés moratorio: {formatearSoles(estadoCuenta.total_interes_mora)}</li>
-                      <li>Interés compensatorio: {formatearSoles(estadoCuenta.total_interes_comp)}</li>
-                      <li>Capital: {formatearSoles(estadoCuenta.total_capital)}</li>
+                      <li>Interés moratorio: {formatearSoles(resultado.aplicado_mora)}</li>
+                      <li>Interés compensatorio: {formatearSoles(resultado.aplicado_interes_comp)}</li>
+                      <li>Capital: {formatearSoles(resultado.aplicado_capital)}</li>
                     </ol>
+                    {Number(resultado.excedente_devuelto) > 0 && (
+                      <p>Devuelve al cliente {formatearSoles(resultado.excedente_devuelto)} de excedente.</p>
+                    )}
                   </Aviso>
                 )}
 
-                <Boton anchoCompleto onClick={alRegistrar} disabled={monto === '' || resultado === 'registrado'}>
-                  Registrar pago
-                </Boton>
+                {pagoAceptado ? (
+                  <Boton anchoCompleto onClick={reiniciar}>
+                    Registrar otro pago
+                  </Boton>
+                ) : (
+                  <Boton anchoCompleto onClick={alRegistrar} disabled={monto === '' || Number(monto) <= 0 || enviando}>
+                    {enviando ? 'Registrando…' : 'Registrar pago'}
+                  </Boton>
+                )}
               </div>
             </>
           )}
@@ -156,10 +255,11 @@ export function RegistrarPago() {
 
         <div className={pagina.columna}>
           <Tarjeta tono="suave">
-            <TarjetaEncabezado titulo="¿Por qué el monto es exacto?" />
+            <TarjetaEncabezado titulo="¿Por qué no hay pagos parciales?" />
             <p className={styles.explicacion}>
               El enunciado del curso no permite pagos parciales de una deuda en su fecha de pago. La mora no nace de pagar una parte, sino de
-              pagar tarde: si el cliente paga después de lo pactado, ese día debe cubrir lo adeudado completo más la mora acumulada.
+              pagar tarde: si el cliente paga después de lo pactado, ese día debe cubrir lo adeudado completo más la mora acumulada. Si
+              entrega de más, el excedente se le devuelve: no se adelantan cuotas futuras.
             </p>
           </Tarjeta>
 
