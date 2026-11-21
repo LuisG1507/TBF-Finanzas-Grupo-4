@@ -5,7 +5,6 @@ from fastapi import APIRouter, HTTPException
 
 from app.schemas import schemas_finanzas as esquemas
 from app.services.finance import finance_amortizacion as amortizacion
-from app.services.finance import finance_pagos as pagos
 from app.services.finance import finance_tasas as tasas
 
 router = APIRouter(prefix="/finanzas", tags=["Calculadora financiera"])
@@ -173,24 +172,3 @@ def cronograma_frances(datos: esquemas.EntradaFrances):
         dias_gracia=datos.dias_gracia,
     )
     return esquemas.RespuestaFrances(**asdict(plan))
-
-
-# --- Pagos: prelacion mora -> interes compensatorio -> capital; rechaza parciales, devuelve excedente ---
-
-@router.post("/pagos", response_model=esquemas.RespuestaPago, summary="Pago: mora, interes compensatorio y capital; rechaza pagos parciales")
-def registrar_pago(datos: esquemas.EntradaPago):
-    nominal = datos.tipo_tasa_mora == tasas.TipoTasa.NOMINAL
-    resultado = pagos.procesar_pago(
-        capital=datos.capital_exigible,
-        interes_comp=datos.interes_comp_exigible,
-        portes=datos.portes_exigibles,
-        seguro=datos.seguro_exigible,
-        fecha_vencimiento=datos.fecha_vencimiento,
-        fecha_pago=datos.fecha_pago,
-        monto_pagado=datos.monto_pagado,
-        tasa_mora_pct=datos.tasa_mora_pct,
-        tipo_mora=datos.tipo_tasa_mora,
-        plazo_mora_dias=_dias(datos.plazo_tasa_mora),
-        capitalizacion_mora_dias=_dias(datos.capitalizacion_mora) if nominal else None,
-    )
-    return esquemas.RespuestaPago(**asdict(resultado))

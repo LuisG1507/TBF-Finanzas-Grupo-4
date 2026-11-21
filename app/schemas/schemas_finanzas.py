@@ -1,4 +1,3 @@
-from datetime import date
 from decimal import Decimal
 from typing import Annotated
 
@@ -212,41 +211,3 @@ class RespuestaFrances(BaseModel):
     interes_total: Decimal
     total_a_pagar: Decimal
     cronograma: list[FilaCronograma]
-
-
-# --- Pagos: prelacion mora -> interes compensatorio -> capital ---
-
-class EntradaPago(BaseModel):
-    capital_exigible: Decimal = Field(ge=0, decimal_places=2, examples=["900.00"])
-    interes_comp_exigible: Decimal = Field(ge=0, decimal_places=2, examples=["14.95"])
-    portes_exigibles: Decimal = Field(default=Decimal(0), ge=0, decimal_places=2)
-    seguro_exigible: Decimal = Field(default=Decimal(0), ge=0, decimal_places=2)
-    fecha_vencimiento: date = Field(examples=["2026-10-26"])
-    fecha_pago: date = Field(examples=["2026-10-31"])
-    monto_pagado: Decimal = Field(gt=0, decimal_places=2, examples=["916.17"])
-    tipo_tasa_mora: TipoTasa = Field(examples=["NOMINAL"])
-    tasa_mora_pct: Decimal = Field(ge=0, decimal_places=4, examples=["12.0000"])
-    plazo_tasa_mora: PeriodoODias = Field(examples=["ANUAL"])
-    capitalizacion_mora: PeriodoODias | None = Field(default=None, examples=["DIARIA"])
-
-    @model_validator(mode="after")
-    def exigir_capitalizacion_si_es_nominal(self):
-        if self.tipo_tasa_mora == TipoTasa.NOMINAL and self.capitalizacion_mora is None:
-            raise ValueError("capitalizacion_mora es obligatoria cuando tipo_tasa_mora es NOMINAL")
-        return self
-
-
-class RespuestaPago(BaseModel):
-    dias_mora: int
-    tasa_mora_pct: Decimal
-    interes_mora: Decimal
-    total_exigible: Decimal
-    aceptado: bool
-    motivo: str | None
-    monto_aplicado: Decimal
-    aplicado_mora: Decimal
-    aplicado_interes_comp: Decimal
-    aplicado_capital: Decimal
-    aplicado_portes: Decimal
-    aplicado_seguro: Decimal
-    excedente_devuelto: Decimal
