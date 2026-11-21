@@ -6,7 +6,7 @@ from app.api.dependencias import admin_de_negocio, usuario_actual
 from app.db.sesion import obtener_sesion
 from app.schemas.schemas_auth import UsuarioActual
 from app.schemas.schemas_catalogos import (
-    MarcaActualizar, MarcaCrear, MarcaRespuesta, ProveedorActualizar, ProveedorCrear, ProveedorRespuesta, UnidadRespuesta,
+    MarcaActualizar, MarcaCrear, MarcaRespuesta, MonedaRespuesta, ProveedorActualizar, ProveedorCrear, ProveedorRespuesta, UnidadRespuesta,
 )
 from app.services import servicio_catalogo
 
@@ -18,6 +18,11 @@ router = APIRouter(tags=["Catálogos de productos"])
 @router.get("/unidades-medida", response_model=list[UnidadRespuesta], summary="Unidades de medida disponibles (UND, KG, LT)")
 def listar_unidades(_: UsuarioActual = Depends(usuario_actual), db: Session = Depends(obtener_sesion)):
     return servicio_catalogo.listar_unidades(db)
+
+
+@router.get("/monedas", response_model=list[MonedaRespuesta], summary="Monedas disponibles para el crédito de un cliente (PEN y USD)")
+def listar_monedas(_: UsuarioActual = Depends(usuario_actual), db: Session = Depends(obtener_sesion)):
+    return servicio_catalogo.listar_monedas(db)
 
 
 # ---------------------------------------------------------------- marcas

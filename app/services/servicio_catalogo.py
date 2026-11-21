@@ -9,7 +9,7 @@ from fastapi import HTTPException, status
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
-from app.models.catalogo import Marca, Proveedor, UnidadMedida
+from app.models.catalogo import Marca, Moneda, Proveedor, UnidadMedida
 from app.schemas.schemas_catalogos import MarcaActualizar, MarcaCrear, ProveedorActualizar, ProveedorCrear
 
 
@@ -17,10 +17,14 @@ def _conflicto(mensaje: str) -> HTTPException:
     return HTTPException(status.HTTP_409_CONFLICT, mensaje)
 
 
-# ---------------------------------------------------------------- unidades de medida
+# ---------------------------------------------------------------- unidades de medida y monedas
 
 def listar_unidades(db: Session) -> list[UnidadMedida]:
     return list(db.scalars(select(UnidadMedida).order_by(UnidadMedida.id_unidad)))
+
+
+def listar_monedas(db: Session) -> list[Moneda]:
+    return list(db.scalars(select(Moneda).order_by(Moneda.id_moneda)))
 
 
 # ---------------------------------------------------------------- marcas

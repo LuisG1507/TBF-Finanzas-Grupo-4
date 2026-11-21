@@ -19,6 +19,17 @@ class UnidadRespuesta(BaseModel):
     nombre: str
 
 
+# --- Monedas (catálogo fijo, solo lectura) ---
+
+class MonedaRespuesta(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id_moneda: int
+    codigo_iso: str
+    nombre: str
+    simbolo: str
+
+
 # --- Marcas ---
 
 class MarcaCrear(_Base):
