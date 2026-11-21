@@ -1,4 +1,4 @@
-from decimal import ROUND_HALF_UP, DefaultContext, Decimal, getcontext
+from decimal import ROUND_CEILING, ROUND_HALF_UP, DefaultContext, Decimal, getcontext
 from enum import Enum
 
 # Precision global para todo calculo con Decimal en la app (una sola vez, en vez
@@ -80,8 +80,15 @@ def calcular_n(plazo_dias: int, capitalizacion_dias: int) -> Decimal:
     return Decimal(plazo_dias) / Decimal(capitalizacion_dias)
 
 
+def dias_por_exceso(valor: Decimal) -> int:
+    """Pasa un plazo a dias enteros redondeando HACIA ARRIBA (decision del equipo, igual que en clase:
+    370.37 dias -> 371, porque con 370 no se llega al monto buscado). Antes se redondea a 7 decimales
+    para que un 180.0000000000001 por ruido numerico no salte a 181."""
+    return int(redondear(valor, DECIMALES_TASA).to_integral_value(rounding=ROUND_CEILING))
+
+
 def periodos_a_dias(n: Decimal, capitalizacion_dias: int) -> int:
-    return int(redondear(n * capitalizacion_dias, 0))
+    return dias_por_exceso(n * capitalizacion_dias)
 
 
 def _validar_monto_mayor(monto: Decimal, capital: Decimal) -> None:
@@ -97,7 +104,10 @@ def tasa_por_periodo_pct(tn_pct: Decimal, m: Decimal) -> Decimal:
 
 
 def _factor_compuesto(tn_pct: Decimal, m: Decimal) -> Decimal:
-    return 1 + tasa_por_periodo_pct(tn_pct, m) / CIEN
+    # Precision completa: el Excel de clase NO redondea la tasa por periodo antes de elevarla a n
+    # (con n grande, p. ej. 5,844 dias, redondearla a 7 decimales desviaba el resultado ~S/ 0.025).
+    # Solo la tasa que se MUESTRA (tasa_por_periodo_pct) va a 7 decimales.
+    return 1 + tn_pct / m / CIEN
 
 
 def calcular_monto(capital: Decimal, tn_pct: Decimal, m: Decimal, n: Decimal) -> Decimal:

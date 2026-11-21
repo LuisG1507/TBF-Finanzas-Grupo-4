@@ -1,0 +1,904 @@
+{
+  "descripcion": "Ejercicios resueltos en clase con su resultado esperado. Entradas = datos del ejercicio; esperado = valor del Excel/diapositivas. Los verifica verificar_casos.py contra la API real.",
+  "casos": [
+    {
+      "id": "SI-01",
+      "grupo": "Interés simple",
+      "titulo": "Capital S/1,000 a 4 años, TSA 24%",
+      "fuente": "Unidad 1 - 06 Tasas de Interés - 01 Tasa Simple (diapositivas), Ejemplo 1, pp. 30-31",
+      "endpoint": "/finanzas/simple/interes",
+      "entrada": {
+        "capital": "1000.00",
+        "tasa_pct": "24",
+        "plazo_tasa": "ANUAL",
+        "plazo": 4,
+        "unidad_plazo": "ANIOS"
+      },
+      "esperado": [
+        {
+          "campo": "interes",
+          "valor": "960.00",
+          "tol": "0.01"
+        },
+        {
+          "campo": "monto",
+          "valor": "1960.00",
+          "tol": "0.01"
+        }
+      ]
+    },
+    {
+      "id": "SI-02",
+      "grupo": "Interés simple",
+      "titulo": "Capital S/7,500 a 9 meses, TSA 18%",
+      "fuente": "Unidad 1 - 06 Tasas de Interés - 01 Tasa Simple (diapositivas), Ejemplo 2, pp. 32-33",
+      "endpoint": "/finanzas/simple/interes",
+      "entrada": {
+        "capital": "7500.00",
+        "tasa_pct": "18",
+        "plazo_tasa": "ANUAL",
+        "plazo": 9,
+        "unidad_plazo": "MESES"
+      },
+      "esperado": [
+        {
+          "campo": "t",
+          "valor": "0.75",
+          "tol": "0.0000001"
+        },
+        {
+          "campo": "interes",
+          "valor": "1012.50",
+          "tol": "0.01"
+        },
+        {
+          "campo": "monto",
+          "valor": "8512.50",
+          "tol": "0.01"
+        }
+      ]
+    },
+    {
+      "id": "SI-03",
+      "grupo": "Interés simple",
+      "titulo": "US$10,250 a 3 meses, TSA 15% (año ordinario 360)",
+      "fuente": "Unidad 1 - 06 Tasas de Interés - 01 Tasa Simple (diapositivas), Ejercicio 1 a), p. 37",
+      "endpoint": "/finanzas/simple/interes",
+      "entrada": {
+        "capital": "10250.00",
+        "tasa_pct": "15",
+        "plazo_tasa": "ANUAL",
+        "plazo": 3,
+        "unidad_plazo": "MESES"
+      },
+      "esperado": [
+        {
+          "campo": "interes",
+          "valor": "384.38",
+          "tol": "0.01"
+        },
+        {
+          "campo": "monto",
+          "valor": "10634.38",
+          "tol": "0.01"
+        }
+      ]
+    },
+    {
+      "id": "SI-04",
+      "grupo": "Interés simple",
+      "titulo": "US$10,250 a 90 días, TSA 15% (año exacto 365)",
+      "fuente": "Unidad 1 - 06 Tasas de Interés - 01 Tasa Simple (diapositivas), Ejercicio 1 b), p. 38",
+      "endpoint": "/finanzas/simple/interes",
+      "entrada": {
+        "capital": "10250.00",
+        "tasa_pct": "15",
+        "plazo_tasa": 365,
+        "plazo": 90,
+        "unidad_plazo": "DIAS"
+      },
+      "esperado": [
+        {
+          "campo": "interes",
+          "valor": "379.11",
+          "tol": "0.01"
+        },
+        {
+          "campo": "monto",
+          "valor": "10629.11",
+          "tol": "0.01"
+        }
+      ]
+    },
+    {
+      "id": "SI-05",
+      "grupo": "Interés simple",
+      "titulo": "Tasa que acumula S/72 sobre S/1,200 en 6 meses",
+      "fuente": "Unidad 1 - 06 Tasas de Interés - 01 Tasa Simple (diapositivas), Ejercicio 2, pp. 43-44",
+      "endpoint": "/finanzas/simple/tasa",
+      "entrada": {
+        "capital": "1200.00",
+        "monto": "1272.00",
+        "plazo_tasa": "ANUAL",
+        "plazo": 6,
+        "unidad_plazo": "MESES"
+      },
+      "esperado": [
+        {
+          "campo": "tasa_pct",
+          "valor": "12",
+          "tol": "0.0000001"
+        }
+      ]
+    },
+    {
+      "id": "SI-06",
+      "grupo": "Interés simple",
+      "titulo": "Capital que se paga hoy por S/11,125 a 9 meses, TSA 15%",
+      "fuente": "Unidad 1 - 06 Tasas de Interés - 01 Tasa Simple (diapositivas), Ejercicio 3, pp. 45-46",
+      "endpoint": "/finanzas/simple/capital",
+      "entrada": {
+        "monto": "11125.00",
+        "tasa_pct": "15",
+        "plazo_tasa": "ANUAL",
+        "plazo": 9,
+        "unidad_plazo": "MESES"
+      },
+      "esperado": [
+        {
+          "campo": "capital",
+          "valor": "10000.00",
+          "tol": "0.01"
+        },
+        {
+          "campo": "interes",
+          "valor": "1125.00",
+          "tol": "0.01"
+        }
+      ]
+    },
+    {
+      "id": "SI-07",
+      "grupo": "Interés simple",
+      "titulo": "Tiempo para que US$1,350 llegue a US$1,475, TSA 9%",
+      "fuente": "Unidad 1 - 06 Tasas de Interés - 01 Tasa Simple (diapositivas), Ejercicio 4, pp. 47-48",
+      "endpoint": "/finanzas/simple/plazo",
+      "entrada": {
+        "capital": "1350.00",
+        "monto": "1475.00",
+        "tasa_pct": "9",
+        "plazo_tasa": "ANUAL",
+        "unidad_plazo": "DIAS"
+      },
+      "esperado": [
+        {
+          "campo": "t",
+          "valor": "1.028806584",
+          "tol": "0.0000001"
+        },
+        {
+          "campo": "plazo_dias",
+          "valor": "371",
+          "tol": "0",
+          "nota": "Los plazos en días se redondean por exceso (decisión del usuario, 2026-11-21): 370.37 días → 371, igual que en la clase."
+        }
+      ]
+    },
+    {
+      "id": "IC-01",
+      "grupo": "Interés compuesto",
+      "titulo": "S/50,000 a 236 días, TNA 8% capitalización diaria",
+      "fuente": "02 - 02 Práctica Dirigida Tasas de Interés - Tasa Nominal (resuelto parcial).xlsx, hoja 'Caso 1', C16",
+      "endpoint": "/finanzas/compuesto/monto",
+      "entrada": {
+        "capital": "50000.00",
+        "tasa_nominal_pct": "8",
+        "plazo_tasa": "ANUAL",
+        "capitalizacion": "DIARIA",
+        "plazo": 236,
+        "unidad_plazo": "DIAS"
+      },
+      "esperado": [
+        {
+          "campo": "monto",
+          "valor": "52691.8936786",
+          "tol": "0.01",
+          "celda": "C16"
+        }
+      ]
+    },
+    {
+      "id": "IC-02",
+      "grupo": "Interés compuesto",
+      "titulo": "TNA (cap. diaria) para pasar de S/10,500 a S/12,000 en 150 días",
+      "fuente": "02 - 02 Práctica Dirigida Tasas de Interés - Tasa Nominal (resuelto parcial).xlsx, hoja 'Caso 2', C18",
+      "endpoint": "/finanzas/compuesto/tasa-nominal",
+      "entrada": {
+        "capital": "10500.00",
+        "monto": "12000.00",
+        "plazo_tasa": "ANUAL",
+        "capitalizacion": "DIARIA",
+        "plazo": 150,
+        "unidad_plazo": "DIAS"
+      },
+      "esperado": [
+        {
+          "campo": "tasa_nominal_pct",
+          "valor": "32.0618",
+          "tol": "0.0001",
+          "celda": "C18"
+        }
+      ]
+    },
+    {
+      "id": "IC-03",
+      "grupo": "Interés compuesto",
+      "titulo": "Depósito inicial para tener S/10,500 a 180 días con esa TNA",
+      "fuente": "02 - 02 Práctica Dirigida Tasas de Interés - Tasa Nominal (resuelto parcial).xlsx, hoja 'Caso 2', C21",
+      "endpoint": "/finanzas/compuesto/capital",
+      "entrada": {
+        "monto": "10500.00",
+        "tasa_nominal_pct": "32.0618",
+        "plazo_tasa": "ANUAL",
+        "capitalizacion": "DIARIA",
+        "plazo": 180,
+        "unidad_plazo": "DIAS"
+      },
+      "esperado": [
+        {
+          "campo": "capital",
+          "valor": "8945.3834719",
+          "tol": "0.01",
+          "celda": "C21",
+          "nota": "El Excel usa la TNA sin redondear; el sistema recibe la tasa con 4 decimales."
+        }
+      ]
+    },
+    {
+      "id": "IC-04",
+      "grupo": "Interés compuesto",
+      "titulo": "Capital hoy para tener S/70,000 en 5,844 días, TNA 8% cap. diaria",
+      "fuente": "2.3 Tasas de Interés - Tasa de Interés Efectiva (resuelto parcial).xlsx, hoja 'VA2', C21",
+      "endpoint": "/finanzas/compuesto/capital",
+      "entrada": {
+        "monto": "70000.00",
+        "tasa_nominal_pct": "8",
+        "plazo_tasa": "ANUAL",
+        "capitalizacion": "DIARIA",
+        "plazo": 5844,
+        "unidad_plazo": "DIAS"
+      },
+      "esperado": [
+        {
+          "campo": "capital",
+          "valor": "19105.4350145",
+          "tol": "0.01",
+          "celda": "C21"
+        }
+      ]
+    },
+    {
+      "id": "IC-05",
+      "grupo": "Interés compuesto",
+      "titulo": "Días para que S/70,000 sean S/80,000, TNA 8% cap. diaria",
+      "fuente": "2.3 Tasas de Interés - Tasa de Interés Efectiva (resuelto parcial).xlsx, hoja 'VA2', C27",
+      "endpoint": "/finanzas/compuesto/plazo",
+      "entrada": {
+        "capital": "70000.00",
+        "monto": "80000.00",
+        "tasa_nominal_pct": "8",
+        "plazo_tasa": "ANUAL",
+        "capitalizacion": "DIARIA",
+        "unidad_plazo": "DIAS"
+      },
+      "esperado": [
+        {
+          "campo": "plazo_periodos",
+          "valor": "600.95803",
+          "tol": "0.001",
+          "celda": "C27"
+        }
+      ]
+    },
+    {
+      "id": "IC-06",
+      "grupo": "Interés compuesto",
+      "titulo": "TNA (cap. diaria) de un crédito de S/5,111.05 que se paga S/5,592.09 en 30 días",
+      "fuente": "2.3 Tasas de Interés - Tasa de Interés Efectiva (resuelto parcial).xlsx, hoja 'TNA1', C19",
+      "endpoint": "/finanzas/compuesto/tasa-nominal",
+      "entrada": {
+        "capital": "5111.05",
+        "monto": "5592.09",
+        "plazo_tasa": "ANUAL",
+        "capitalizacion": "DIARIA",
+        "plazo": 30,
+        "unidad_plazo": "DIAS"
+      },
+      "esperado": [
+        {
+          "campo": "tasa_nominal_pct",
+          "valor": "108.09986",
+          "tol": "0.001",
+          "celda": "C19"
+        }
+      ]
+    },
+    {
+      "id": "IC-07",
+      "grupo": "Interés compuesto",
+      "titulo": "Año 1: S/100,000 a TEA 5.7%",
+      "fuente": "2.3 Tasas de Interés - Tasa de Interés Efectiva (resuelto parcial).xlsx, hoja 'VF1', C22",
+      "endpoint": "/finanzas/compuesto/monto",
+      "entrada": {
+        "capital": "100000.00",
+        "tasa_nominal_pct": "5.7",
+        "plazo_tasa": "ANUAL",
+        "capitalizacion": "ANUAL",
+        "plazo": 1,
+        "unidad_plazo": "ANIOS"
+      },
+      "esperado": [
+        {
+          "campo": "monto",
+          "valor": "105700.0000000",
+          "tol": "0.01",
+          "celda": "C22"
+        }
+      ]
+    },
+    {
+      "id": "IC-08",
+      "grupo": "Interés compuesto",
+      "titulo": "Año 2: S/105,700 a TN 3% semestral capitalizable mensualmente, 12 meses",
+      "fuente": "2.3 Tasas de Interés - Tasa de Interés Efectiva (resuelto parcial).xlsx, hoja 'VF1', C23",
+      "endpoint": "/finanzas/compuesto/monto",
+      "entrada": {
+        "capital": "105700.00",
+        "tasa_nominal_pct": "3",
+        "plazo_tasa": "SEMESTRAL",
+        "capitalizacion": "MENSUAL",
+        "plazo": 12,
+        "unidad_plazo": "MESES"
+      },
+      "esperado": [
+        {
+          "campo": "monto",
+          "valor": "112219.3447141",
+          "tol": "0.01",
+          "celda": "C23"
+        }
+      ]
+    },
+    {
+      "id": "TC-01",
+      "grupo": "Conversión de tasas",
+      "titulo": "TEA 10% a tasa efectiva cuatrimestral (120 días)",
+      "fuente": "06 - 01 Clase de Cronograma de Pago (resuelto) 6-11-26.xlsx, hoja 'Caso 1', C32",
+      "endpoint": "/finanzas/conversion-tasas",
+      "entrada": {
+        "tipo_origen": "EFECTIVA",
+        "tasa_pct": "10",
+        "plazo_origen": "ANUAL",
+        "tipo_destino": "EFECTIVA",
+        "plazo_destino": 120
+      },
+      "esperado": [
+        {
+          "campo": "tasa_resultado_pct",
+          "valor": "3.2280115",
+          "tol": "0.00001",
+          "celda": "C32"
+        }
+      ]
+    },
+    {
+      "id": "TC-02",
+      "grupo": "Conversión de tasas",
+      "titulo": "TEA 9% a tasa efectiva semestral (180 días)",
+      "fuente": "06 - 01 Clase de Cronograma de Pago (resuelto) 6-11-26.xlsx, hoja 'Caso 3 Francés', D22",
+      "endpoint": "/finanzas/conversion-tasas",
+      "entrada": {
+        "tipo_origen": "EFECTIVA",
+        "tasa_pct": "9",
+        "plazo_origen": "ANUAL",
+        "tipo_destino": "EFECTIVA",
+        "plazo_destino": 180
+      },
+      "esperado": [
+        {
+          "campo": "tasa_resultado_pct",
+          "valor": "4.4030651",
+          "tol": "0.00001",
+          "celda": "D22"
+        }
+      ]
+    },
+    {
+      "id": "TC-03",
+      "grupo": "Conversión de tasas",
+      "titulo": "TEA 8% a tasa efectiva semestral (180 días)",
+      "fuente": "06 - 01 Clase de Cronograma de Pago (resuelto) 6-11-26.xlsx, hoja 'Caso 3 Francés', E22",
+      "endpoint": "/finanzas/conversion-tasas",
+      "entrada": {
+        "tipo_origen": "EFECTIVA",
+        "tasa_pct": "8",
+        "plazo_origen": "ANUAL",
+        "tipo_destino": "EFECTIVA",
+        "plazo_destino": 180
+      },
+      "esperado": [
+        {
+          "campo": "tasa_resultado_pct",
+          "valor": "3.9230485",
+          "tol": "0.00001",
+          "celda": "E22"
+        }
+      ]
+    },
+    {
+      "id": "TC-04",
+      "grupo": "Conversión de tasas",
+      "titulo": "TEA 20% a tasa efectiva mensual (30 días)",
+      "fuente": "06 - 01 Clase de Cronograma de Pago (resuelto) 6-11-26.xlsx, hoja 'Caso 8', C33",
+      "endpoint": "/finanzas/conversion-tasas",
+      "entrada": {
+        "tipo_origen": "EFECTIVA",
+        "tasa_pct": "20",
+        "plazo_origen": "ANUAL",
+        "tipo_destino": "EFECTIVA",
+        "plazo_destino": 30
+      },
+      "esperado": [
+        {
+          "campo": "tasa_resultado_pct",
+          "valor": "1.5309470",
+          "tol": "0.00001",
+          "celda": "C33"
+        }
+      ]
+    },
+    {
+      "id": "TC-05",
+      "grupo": "Conversión de tasas",
+      "titulo": "TEA 8% a tasa efectiva cuatrimestral (120 días)",
+      "fuente": "06 - 01 Clase de Cronograma de Pago (resuelto) 6-11-26.xlsx, hoja 'Caso 5', E24",
+      "endpoint": "/finanzas/conversion-tasas",
+      "entrada": {
+        "tipo_origen": "EFECTIVA",
+        "tasa_pct": "8",
+        "plazo_origen": "ANUAL",
+        "tipo_destino": "EFECTIVA",
+        "plazo_destino": 120
+      },
+      "esperado": [
+        {
+          "campo": "tasa_resultado_pct",
+          "valor": "2.5985568",
+          "tol": "0.00001",
+          "celda": "E24"
+        }
+      ]
+    },
+    {
+      "id": "FR-01",
+      "grupo": "Método francés",
+      "titulo": "Financiar S/112,000 a 9 cuatrimestres, TEA 10%",
+      "fuente": "06 - 01 Clase de Cronograma de Pago (resuelto) 6-11-26.xlsx, hoja 'Caso 1'",
+      "endpoint": "/finanzas/frances",
+      "entrada": {
+        "capital": "112000.00",
+        "tipo_tasa": "EFECTIVA",
+        "tasa_pct": "10",
+        "plazo_tasa": "ANUAL",
+        "periodo_pago": 120,
+        "num_cuotas": 9,
+        "dias_gracia": 0
+      },
+      "esperado": [
+        {
+          "campo": "tep_pct",
+          "valor": "3.2280115",
+          "tol": "0.00001",
+          "celda": "C32"
+        },
+        {
+          "campo": "cuota",
+          "valor": "14537.9497623",
+          "tol": "0.01",
+          "celda": "C33"
+        },
+        {
+          "campo": "cronograma.0.interes",
+          "valor": "3615.3729311",
+          "tol": "0.01",
+          "celda": "C38"
+        },
+        {
+          "campo": "cronograma.0.amortizacion",
+          "valor": "10922.5768312",
+          "tol": "0.01",
+          "celda": "D38"
+        },
+        {
+          "campo": "cronograma.0.saldo_final",
+          "valor": "101077.4231688",
+          "tol": "0.01",
+          "celda": "F38"
+        },
+        {
+          "campo": "cronograma.8.saldo_final",
+          "valor": "0",
+          "tol": "0.01"
+        },
+        {
+          "campo": "interes_total",
+          "valor": "18841.5478604353416",
+          "tol": "0.045",
+          "nota": "Suma de la columna Interés del Excel (C38:C46). Tolerancia = medio céntimo por cuota (9 cuotas): la última cuota absorbe el redondeo acumulado a céntimos."
+        }
+      ]
+    },
+    {
+      "id": "FR-02",
+      "grupo": "Método francés",
+      "titulo": "Financiar S/1,440,000 a 8 semestres, TEA 9% (diapositiva Ej. 1)",
+      "fuente": "06 - 01 Clase de Cronograma de Pago (resuelto) 6-11-26.xlsx, hoja 'Caso 3 Francés', filas 22-37",
+      "endpoint": "/finanzas/frances",
+      "entrada": {
+        "capital": "1440000.00",
+        "tipo_tasa": "EFECTIVA",
+        "tasa_pct": "9",
+        "plazo_tasa": "ANUAL",
+        "periodo_pago": 180,
+        "num_cuotas": 8,
+        "dias_gracia": 0
+      },
+      "esperado": [
+        {
+          "campo": "tep_pct",
+          "valor": "4.4030651",
+          "tol": "0.00001",
+          "celda": "D22"
+        },
+        {
+          "campo": "cuota",
+          "valor": "217454.1136247",
+          "tol": "0.01",
+          "celda": "D24"
+        },
+        {
+          "campo": "cronograma.0.interes",
+          "valor": "63404.1372831",
+          "tol": "0.01",
+          "celda": "D29"
+        },
+        {
+          "campo": "cronograma.0.amortizacion",
+          "valor": "154049.9763416",
+          "tol": "0.01",
+          "celda": "E29"
+        },
+        {
+          "campo": "cronograma.7.interes",
+          "valor": "9170.8477655",
+          "tol": "0.01",
+          "celda": "D36"
+        },
+        {
+          "campo": "interes_total",
+          "valor": "299632.9089974",
+          "tol": "0.040",
+          "celda": "D37",
+          "nota": "Tolerancia = medio céntimo por cuota (8 cuotas): la última cuota absorbe el redondeo acumulado a céntimos."
+        },
+        {
+          "campo": "total_a_pagar",
+          "valor": "1739632.9089974",
+          "tol": "0.040",
+          "celda": "F37",
+          "nota": "Tolerancia = medio céntimo por cuota (8 cuotas): la última cuota absorbe el redondeo acumulado a céntimos."
+        }
+      ]
+    },
+    {
+      "id": "FR-03",
+      "grupo": "Método francés con gracia",
+      "titulo": "S/1,440,000, TEA 9%, 1 semestre de gracia y 7 cuotas (se comparan las 3 primeras, antes del cambio de tasa del ejercicio)",
+      "fuente": "06 - 01 Clase de Cronograma de Pago (resuelto) 6-11-26.xlsx, hoja 'Caso 3 Francés', filas 85-96",
+      "endpoint": "/finanzas/frances",
+      "entrada": {
+        "capital": "1440000.00",
+        "tipo_tasa": "EFECTIVA",
+        "tasa_pct": "9",
+        "plazo_tasa": "ANUAL",
+        "periodo_pago": 180,
+        "num_cuotas": 7,
+        "dias_gracia": 180
+      },
+      "esperado": [
+        {
+          "campo": "capital_capitalizado",
+          "valor": "1503404.1372831",
+          "tol": "0.01",
+          "celda": "D87"
+        },
+        {
+          "campo": "interes_gracia",
+          "valor": "63404.1372831",
+          "tol": "0.01",
+          "celda": "D87-D85"
+        },
+        {
+          "campo": "cuota",
+          "valor": "254225.5982565",
+          "tol": "0.01",
+          "celda": "D89"
+        },
+        {
+          "campo": "cronograma.0.interes",
+          "valor": "66195.8627169",
+          "tol": "0.01",
+          "celda": "D94"
+        },
+        {
+          "campo": "cronograma.0.amortizacion",
+          "valor": "188029.7355397",
+          "tol": "0.01",
+          "celda": "E94"
+        },
+        {
+          "campo": "cronograma.1.interes",
+          "valor": "57916.7910742",
+          "tol": "0.01",
+          "celda": "D95"
+        },
+        {
+          "campo": "cronograma.2.saldo_final",
+          "valor": "914113.1828229",
+          "tol": "0.02",
+          "celda": "G96"
+        }
+      ]
+    },
+    {
+      "id": "FR-04",
+      "grupo": "Método francés",
+      "titulo": "Tramo final del Caso 3: saldo S/914,113.18 a 4 semestres con TEA 8%",
+      "fuente": "06 - 01 Clase de Cronograma de Pago (resuelto) 6-11-26.xlsx, hoja 'Caso 3 Francés', filas 97-100",
+      "endpoint": "/finanzas/frances",
+      "entrada": {
+        "capital": "914113.18",
+        "tipo_tasa": "EFECTIVA",
+        "tasa_pct": "8",
+        "plazo_tasa": "ANUAL",
+        "periodo_pago": 180,
+        "num_cuotas": 4,
+        "dias_gracia": 0
+      },
+      "esperado": [
+        {
+          "campo": "tep_pct",
+          "valor": "3.9230485",
+          "tol": "0.00001",
+          "celda": "E86"
+        },
+        {
+          "campo": "cuota",
+          "valor": "251372.5399132",
+          "tol": "0.01",
+          "celda": "F97"
+        },
+        {
+          "campo": "cronograma.0.interes",
+          "valor": "35861.1030878",
+          "tol": "0.01",
+          "celda": "D97"
+        },
+        {
+          "campo": "interes_total",
+          "valor": "91376.976829964715",
+          "tol": "0.020",
+          "nota": "Suma de D97:D100. Tolerancia = medio céntimo por cuota (4 cuotas): la última cuota absorbe el redondeo acumulado a céntimos."
+        }
+      ]
+    },
+    {
+      "id": "FR-05",
+      "grupo": "Método francés",
+      "titulo": "Financiar S/19,600 a 6 cuatrimestres, TEA 10% (se comparan las 3 primeras cuotas)",
+      "fuente": "06 - 01 Clase de Cronograma de Pago (resuelto) 6-11-26.xlsx, hoja 'Caso 5', filas 24-31",
+      "endpoint": "/finanzas/frances",
+      "entrada": {
+        "capital": "19600.00",
+        "tipo_tasa": "EFECTIVA",
+        "tasa_pct": "10",
+        "plazo_tasa": "ANUAL",
+        "periodo_pago": 120,
+        "num_cuotas": 6,
+        "dias_gracia": 0
+      },
+      "esperado": [
+        {
+          "campo": "tep_pct",
+          "valor": "3.2280115",
+          "tol": "0.00001",
+          "celda": "D24"
+        },
+        {
+          "campo": "cuota",
+          "valor": "3645.5010389",
+          "tol": "0.01",
+          "celda": "D26"
+        },
+        {
+          "campo": "cronograma.0.interes",
+          "valor": "632.6902629",
+          "tol": "0.01",
+          "celda": "D29"
+        },
+        {
+          "campo": "cronograma.0.amortizacion",
+          "valor": "3012.8107759",
+          "tol": "0.01",
+          "celda": "E29"
+        },
+        {
+          "campo": "cronograma.2.saldo_final",
+          "valor": "10266.6666667",
+          "tol": "0.01",
+          "celda": "G31"
+        }
+      ]
+    },
+    {
+      "id": "FR-06",
+      "grupo": "Método francés",
+      "titulo": "Tramo final del Caso 5: saldo S/10,266.67 a 3 cuatrimestres con TEA 8%",
+      "fuente": "06 - 01 Clase de Cronograma de Pago (resuelto) 6-11-26.xlsx, hoja 'Caso 5', filas 32-34",
+      "endpoint": "/finanzas/frances",
+      "entrada": {
+        "capital": "10266.67",
+        "tipo_tasa": "EFECTIVA",
+        "tasa_pct": "8",
+        "plazo_tasa": "ANUAL",
+        "periodo_pago": 120,
+        "num_cuotas": 3,
+        "dias_gracia": 0
+      },
+      "esperado": [
+        {
+          "campo": "tep_pct",
+          "valor": "2.5985568",
+          "tol": "0.00001",
+          "celda": "E24"
+        },
+        {
+          "campo": "cuota",
+          "valor": "3601.5997256",
+          "tol": "0.01",
+          "celda": "E26"
+        },
+        {
+          "campo": "cronograma.0.interes",
+          "valor": "266.7851649",
+          "tol": "0.01",
+          "celda": "D32"
+        },
+        {
+          "campo": "interes_total",
+          "valor": "538.13251023569818",
+          "tol": "0.015",
+          "nota": "Suma de D32:D34. Tolerancia = medio céntimo por cuota (3 cuotas): la última cuota absorbe el redondeo acumulado a céntimos."
+        }
+      ]
+    },
+    {
+      "id": "FR-07",
+      "grupo": "Método francés",
+      "titulo": "Financiar S/90,000 a 24 meses, TEA 20% (cuota sin seguro ni comisión)",
+      "fuente": "06 - 01 Clase de Cronograma de Pago (resuelto) 6-11-26.xlsx, hoja 'Caso 8', filas 33-63",
+      "endpoint": "/finanzas/frances",
+      "entrada": {
+        "capital": "90000.00",
+        "tipo_tasa": "EFECTIVA",
+        "tasa_pct": "20",
+        "plazo_tasa": "ANUAL",
+        "periodo_pago": 30,
+        "num_cuotas": 24,
+        "dias_gracia": 0
+      },
+      "esperado": [
+        {
+          "campo": "tep_pct",
+          "valor": "1.5309470",
+          "tol": "0.00001",
+          "celda": "C33"
+        },
+        {
+          "campo": "cuota",
+          "valor": "4509.3349472",
+          "tol": "0.01",
+          "celda": "C34"
+        },
+        {
+          "campo": "cronograma.0.interes",
+          "valor": "1377.8523450",
+          "tol": "0.01",
+          "celda": "C40"
+        },
+        {
+          "campo": "cronograma.0.amortizacion",
+          "valor": "3131.4826022",
+          "tol": "0.01",
+          "celda": "D40"
+        },
+        {
+          "campo": "cronograma.0.saldo_final",
+          "valor": "86868.5173978",
+          "tol": "0.01",
+          "celda": "G40"
+        },
+        {
+          "campo": "interes_total",
+          "valor": "18224.03873264535765",
+          "tol": "0.120",
+          "nota": "Suma de C40:C63. Tolerancia = medio céntimo por cuota (24 cuotas): la última cuota absorbe el redondeo acumulado a céntimos."
+        }
+      ]
+    },
+    {
+      "id": "MO-01",
+      "grupo": "Mora (libro)",
+      "titulo": "Pagaré S/20,000 pagado 7 días tarde: mora TEA 60%, compensatorio TNA 20% cap. diaria, comisión S/50",
+      "fuente": "Martín Senmache, Matemática Financiera, Cap. 5, ejercicio 5-36 c), p. 129 (respuesta S/20,331.53)",
+      "endpoint": "/finanzas/mora",
+      "entrada": {
+        "monto_vencido": "20000.00",
+        "dias_atraso": 7,
+        "tipo_tasa_mora": "EFECTIVA",
+        "tasa_mora_pct": "60",
+        "plazo_tasa_mora": "ANUAL",
+        "tipo_tasa_comp": "NOMINAL",
+        "tasa_comp_pct": "20",
+        "plazo_tasa_comp": "ANUAL",
+        "capitalizacion_comp": "DIARIA",
+        "comision_cobranza": "50.00"
+      },
+      "esperado": [
+        {
+          "campo": "total_a_pagar",
+          "valor": "20311.53",
+          "tol": "0.00",
+          "nota": "Libro: 20,331.53 menos los gastos de administración (15.00) y portes (5.00) que el sistema no maneja."
+        }
+      ]
+    },
+    {
+      "id": "MO-02",
+      "grupo": "Mora (libro)",
+      "titulo": "Pagaré S/65,850 pagado 6 días tarde: mora TNA 12% cap. diaria, compensatorio TEA 24%, comisión S/80",
+      "fuente": "Martín Senmache, Matemática Financiera, Cap. 5, ejercicio 5-37 e), p. 130 (respuesta S/59,740.32)",
+      "endpoint": "/finanzas/mora",
+      "entrada": {
+        "monto_vencido": "65850.00",
+        "dias_atraso": 6,
+        "tipo_tasa_mora": "NOMINAL",
+        "tasa_mora_pct": "12",
+        "plazo_tasa_mora": "ANUAL",
+        "capitalizacion_mora": "DIARIA",
+        "tipo_tasa_comp": "EFECTIVA",
+        "tasa_comp_pct": "24",
+        "plazo_tasa_comp": "ANUAL",
+        "comision_cobranza": "80.00"
+      },
+      "esperado": [
+        {
+          "campo": "total_a_pagar",
+          "valor": "66298.32",
+          "tol": "0.00",
+          "nota": "Libro: 59,740.32 = 66,298.32 − 6,585.00 (retención devuelta) + 27.00 (gastos y portes)."
+        }
+      ]
+    }
+  ]
+}

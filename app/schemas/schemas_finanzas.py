@@ -1,7 +1,7 @@
 from decimal import Decimal
 from typing import Annotated
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, field_serializer, model_validator
 
 from app.services.finance.finance_tasas import Periodo, TipoTasa, UnidadPlazo
 
@@ -192,6 +192,53 @@ class EntradaFrances(BaseModel):
         if self.tipo_tasa == TipoTasa.NOMINAL and self.capitalizacion is None:
             raise ValueError("capitalizacion es obligatoria cuando tipo_tasa es NOMINAL")
         return self
+
+
+# --- Mora (libro de Senmache, fórmulas Nº34 a Nº37) ---
+
+class EntradaMora(BaseModel):
+    monto_vencido: Decimal = Field(gt=0, decimal_places=2, examples=["20000.00"])
+    dias_atraso: int = Field(ge=0, examples=[7])
+
+    tipo_tasa_mora: TipoTasa = Field(examples=["EFECTIVA"])
+    tasa_mora_pct: Decimal = Field(gt=0, decimal_places=4, examples=["60.0000"])
+    plazo_tasa_mora: PeriodoODias = Field(examples=["ANUAL", 236])
+    capitalizacion_mora: PeriodoODias | None = Field(default=None, examples=[None, "DIARIA"])
+
+    compensatorio_sigue_corriendo: bool = Field(default=True, description="El libro cobra el compensatorio también durante el atraso")
+    tipo_tasa_comp: TipoTasa | None = Field(default=None, examples=["NOMINAL"])
+    tasa_comp_pct: Decimal | None = Field(default=None, gt=0, decimal_places=4, examples=["20.0000"])
+    plazo_tasa_comp: PeriodoODias | None = Field(default=None, examples=["ANUAL"])
+    capitalizacion_comp: PeriodoODias | None = Field(default=None, examples=["DIARIA"])
+
+    comision_cobranza: Decimal = Field(default=Decimal(0), ge=0, decimal_places=2, examples=["50.00"])
+
+    @model_validator(mode="after")
+    def validar_tasas(self):
+        if self.tipo_tasa_mora == TipoTasa.NOMINAL and self.capitalizacion_mora is None:
+            raise ValueError("capitalizacion_mora es obligatoria cuando tipo_tasa_mora es NOMINAL")
+        if self.compensatorio_sigue_corriendo:
+            if self.tipo_tasa_comp is None or self.tasa_comp_pct is None or self.plazo_tasa_comp is None:
+                raise ValueError("tipo_tasa_comp, tasa_comp_pct y plazo_tasa_comp son obligatorios mientras el compensatorio siga corriendo")
+            if self.tipo_tasa_comp == TipoTasa.NOMINAL and self.capitalizacion_comp is None:
+                raise ValueError("capitalizacion_comp es obligatoria cuando tipo_tasa_comp es NOMINAL")
+        return self
+
+
+class RespuestaMora(BaseModel):
+    dias_atraso: int
+    monto_vencido: Decimal
+    tasa_mora_dias_pct: Decimal
+    interes_moratorio: Decimal
+    tasa_compensatoria_dias_pct: Decimal
+    interes_compensatorio: Decimal
+    comision_cobranza: Decimal
+    total_atraso: Decimal
+    total_a_pagar: Decimal
+
+    @field_serializer("tasa_mora_dias_pct", "tasa_compensatoria_dias_pct")
+    def _tasa_sin_notacion_cientifica(self, valor: Decimal) -> str:
+        return format(valor, "f")  # 0.0000000 en vez de 0E-7
 
 
 class FilaCronograma(BaseModel):
