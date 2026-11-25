@@ -118,6 +118,23 @@ def _cliente_de_tienda(db: Session, tienda_id: int, id_cliente: int) -> Cliente:
     return cliente
 
 
+cliente_de_tienda = _cliente_de_tienda  # lo usa el módulo de compras
+
+
+def condicion_en_fecha(cliente: Cliente, fecha) -> CondicionCredito | None:
+    """La condición de crédito que regía en una fecha (para compras registradas con fecha pasada)."""
+    candidatas = [c for c in cliente.condiciones_credito if c.vigente_desde <= fecha and (c.vigente_hasta is None or fecha <= c.vigente_hasta)]
+    return max(candidatas, key=lambda c: c.id_condicion) if candidatas else None
+
+
+def _fecha_de_inicio(pedida, hoy):
+    if pedida is None:
+        return hoy
+    if pedida > hoy:
+        raise _invalido("La fecha de inicio de la condición no puede ser futura.")
+    return pedida
+
+
 def _documento_libre(db: Session, tienda_id: int, tipo: str, numero: str, excepto: int | None = None) -> None:
     consulta = select(Cliente.id_cliente).where(Cliente.tienda_id == tienda_id, Cliente.tipo_documento == tipo, Cliente.numero_documento == numero)
     if excepto is not None:
@@ -194,6 +211,7 @@ def crear(db: Session, tienda_id: int, datos: ClienteCrear, actor: UsuarioActual
     if db.scalar(select(Usuario.id_usuario).where(Usuario.username == username)) is not None:
         raise _conflicto(f"El usuario «{username}» ya está en uso. Indica otro en el campo «usuario».")
     moneda = _moneda(db, datos.condicion.moneda)
+    desde = _fecha_de_inicio(datos.condicion.vigente_desde, hoy_lima())
     rol = db.scalar(select(Rol).where(Rol.codigo == RolCodigo.CLIENTE))
     if rol is None:
         raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, "Faltan los datos base: ejecuta los seeds (python -m app.db.seeds).")
@@ -208,7 +226,7 @@ def crear(db: Session, tienda_id: int, datos: ClienteCrear, actor: UsuarioActual
         )
         db.add(cliente)
         db.flush()
-        condicion = _construir_condicion(cliente.id_cliente, moneda, datos.condicion, hoy_lima())
+        condicion = _construir_condicion(cliente.id_cliente, moneda, datos.condicion, desde)
         db.add(condicion)
         db.flush()
 
@@ -268,15 +286,17 @@ def cambiar_condicion(db: Session, tienda_id: int, id_cliente: int, datos: Condi
         raise _conflicto("El cliente está dado de baja: reactívalo antes de cambiar sus condiciones.")
 
     moneda = _moneda(db, datos.moneda)
-    hoy = hoy_lima()
-    nueva = _construir_condicion(cliente.id_cliente, moneda, datos, hoy)
+    desde = _fecha_de_inicio(datos.vigente_desde, hoy_lima())
+    nueva = _construir_condicion(cliente.id_cliente, moneda, datos, desde)
     nueva.moneda = moneda
     anterior = condicion_vigente(cliente)
     if anterior is not None and _son_iguales(anterior, nueva):
         return _respuesta(cliente)  # no cambió nada: no se crea una versión nueva
+    if anterior is not None and desde < anterior.vigente_desde:
+        raise _invalido("La nueva condición no puede empezar antes que la que está vigente.")
 
     if anterior is not None:
-        anterior.vigente_hasta = hoy - timedelta(days=1)  # la anterior deja de regir el día antes de la nueva
+        anterior.vigente_hasta = desde - timedelta(days=1)  # la anterior deja de regir el día antes de la nueva
     db.add(nueva)
     db.flush()
     servicio_bitacora.registrar(

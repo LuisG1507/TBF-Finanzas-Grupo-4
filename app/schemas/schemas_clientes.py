@@ -103,6 +103,12 @@ class CondicionCrear(_Base):
     dia_corte: int = Field(ge=1, le=28, description="Día del mes en que se cierra el ciclo de compras", examples=[20])
     dia_pago: int = Field(ge=1, le=28, description="Día del mes en que se compromete a pagar", examples=[26])
     hora_corte: time = Field(default=time(0, 0), description="Hora del día de corte (por defecto 00:00)", examples=["00:00"])
+    vigente_desde: date | None = Field(
+        default=None,
+        description="Desde cuándo rige esta condición. Si no se indica, hoy (hora de Lima). No puede ser futura; "
+        "sirve para cargar clientes que ya compraban antes de entrar al sistema.",
+        examples=[None],
+    )
 
 
 class MonedaResumen(BaseModel):
