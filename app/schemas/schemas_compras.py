@@ -11,6 +11,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.models.enumeraciones import EstadoCompra, EstadoCuota, ModalidadCompra
 from app.schemas.schemas_clientes import MonedaResumen
+from app.schemas.schemas_finanzas import TceaPct
 
 
 class _Base(BaseModel):
@@ -106,6 +107,7 @@ class CompraRespuesta(BaseModel):
     fecha_primer_pago: date  # en FIN_DE_MES, la única fecha de pago
     total_intereses: Decimal
     total_a_pagar: Decimal
+    tcea_pct: TceaPct | None = Field(default=None, description="Costo efectivo anual de los pagos programados, en porcentaje.")
     cronograma: list[CuotaRespuesta]  # vacío en FIN_DE_MES
     credito: CreditoRespuesta | None = None
 

@@ -899,6 +899,39 @@
           "nota": "Libro: 59,740.32 = 66,298.32 − 6,585.00 (retención devuelta) + 27.00 (gastos y portes)."
         }
       ]
+    },
+    {
+      "id": "TCEA-01",
+      "grupo": "TCEA (verificación de fórmulas)",
+      "titulo": "Crédito de S/100 con un pago de S/103 a 30 días",
+      "fuente": "Senmache 2013, fórmula 39; caso de verificación con el motor",
+      "endpoint": "/finanzas/tcea",
+      "entrada": {
+        "monto_recibido": "100.00",
+        "pagos": [{"monto": "103.00", "dias": 30}]
+      },
+      "esperado": [
+        {"campo": "tcea_pct", "valor": "42.5760887", "tol": "0", "nota": "Resultado independiente de ((1.03)^12 − 1) × 100."}
+      ]
+    },
+    {
+      "id": "TCEA-02",
+      "grupo": "TCEA (verificación de fórmulas)",
+      "titulo": "Crédito de S/13,000 con tres pagos fechados y sin redondeo previo",
+      "fuente": "Senmache 2013, fórmula 75; caso de verificación con el motor",
+      "endpoint": "/finanzas/tcea",
+      "entrada": {
+        "monto_recibido": "13000.00",
+        "fecha_compra": "2026-09-26",
+        "pagos": [
+          {"monto": "1030.00", "fecha": "2026-10-26"},
+          {"monto": "2121.80", "fecha": "2026-11-26"},
+          {"monto": "10927.27", "fecha": "2026-12-26"}
+        ]
+      },
+      "esperado": [
+        {"campo": "tcea_pct", "valor": "42.5760887", "tol": "0", "nota": "Descontar los pagos al 3 % cada 30 días devuelve 1,000 + 2,000 + 10,000."}
+      ]
     }
   ]
 }

@@ -4,12 +4,29 @@ from decimal import Decimal
 from fastapi import APIRouter, HTTPException
 
 from app.schemas import schemas_finanzas as esquemas
+from app.services.ciclo_credito import dias_30_360
 from app.services.finance import finance_amortizacion as amortizacion
 from app.services.finance import finance_mora as mora
 from app.services.finance import finance_pagos as pagos
 from app.services.finance import finance_tasas as tasas
+from app.services.finance.finance_tcea import calcular_tcea_pct
 
 router = APIRouter(prefix="/finanzas", tags=["Calculadora financiera"])
+
+
+@router.post("/tcea", response_model=esquemas.RespuestaTcea, summary="TCEA de uno o varios pagos programados")
+def calcular_tcea(datos: esquemas.EntradaTcea):
+    flujos = []
+    for pago in datos.pagos:
+        dias = pago.dias
+        if pago.fecha is not None and datos.fecha_compra is not None:
+            dias = dias_30_360(datos.fecha_compra, pago.fecha)
+        assert dias is not None  # El esquema exige días o una fecha con su fecha de compra.
+        flujos.append((dias, pago.monto))
+    try:
+        return esquemas.RespuestaTcea(tcea_pct=calcular_tcea_pct(datos.monto_recibido, flujos))
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
 
 
 def _dias(periodo: tasas.Periodo | int) -> int:

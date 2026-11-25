@@ -145,6 +145,8 @@ try:
             fin_antes = comprar("2026-09-15T09:00:00")
             fin_en_corte = comprar("2026-09-20T18:00:00")
             comprobar(cuotas["dias_gracia"] == 11, "11 días de gracia")
+            comprobar(Decimal(cuotas["tcea_pct"]) == Decimal("42.5650862"), "TCEA de las tres cuotas redondeadas del 15-set")
+            comprobar(Decimal(fin_antes["tcea_pct"]) == Decimal("42.5891343"), "TCEA del pago único redondeado del 15-set")
             comprobar([c["fecha_vencimiento"] for c in cuotas["cronograma"]] ==
                       ["2026-10-26", "2026-11-26", "2026-12-26"], "vencimientos del enunciado")
             comprobar(fin_en_corte["fecha_corte"] == "2026-10-20", "compra en corte pasa al mes siguiente")

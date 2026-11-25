@@ -135,6 +135,7 @@ export interface Compra {
   cuota: string | null
   total_intereses: string
   total_a_pagar: string
+  tcea_pct: string | null
   estado: EstadoCompra | null
   items: DetalleCompra[]
   cronograma: Cuota[]

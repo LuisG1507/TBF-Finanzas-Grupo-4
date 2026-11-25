@@ -2,9 +2,48 @@ from datetime import date
 from decimal import Decimal
 from typing import Annotated
 
-from pydantic import BaseModel, Field, field_serializer, model_validator
+from pydantic import BaseModel, ConfigDict, Field, PlainSerializer, field_serializer, model_validator
 
 from app.services.finance.finance_tasas import Periodo, TipoTasa, UnidadPlazo
+
+TceaPct = Annotated[Decimal, PlainSerializer(lambda tasa: format(tasa, "f"), return_type=str, when_used="json")]
+
+
+class PagoTcea(BaseModel):
+    monto: Decimal = Field(ge=0, max_digits=12, decimal_places=2)
+    fecha: date | None = Field(default=None, description="Fecha de vencimiento del pago.")
+    dias: int | None = Field(default=None, gt=0, description="Días comerciales desde la entrega del crédito hasta el pago.")
+
+    @model_validator(mode="after")
+    def validar_plazo(self):
+        if (self.fecha is None) == (self.dias is None):
+            raise ValueError("Indica la fecha o los días comerciales de cada pago.")
+        return self
+
+
+class EntradaTcea(BaseModel):
+    model_config = ConfigDict(json_schema_extra={"examples": [
+        {"monto_recibido": "100.00", "pagos": [{"monto": "103.00", "dias": 30}]},
+        {"monto_recibido": "300.00", "fecha_compra": "2026-09-15", "pagos": [
+            {"monto": "107.21", "fecha": "2026-10-26"},
+            {"monto": "107.21", "fecha": "2026-11-26"},
+            {"monto": "107.22", "fecha": "2026-12-26"},
+        ]},
+    ]})
+
+    monto_recibido: Decimal = Field(gt=0, max_digits=12, decimal_places=2)
+    fecha_compra: date | None = Field(default=None, description="Fecha de entrega del crédito. Necesaria para los pagos con fecha.")
+    pagos: list[PagoTcea] = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def validar_fecha_compra(self):
+        if self.fecha_compra is None and any(pago.fecha is not None for pago in self.pagos):
+            raise ValueError("Indica la fecha de compra para calcular los días comerciales de los pagos con fecha.")
+        return self
+
+
+class RespuestaTcea(BaseModel):
+    tcea_pct: TceaPct
 
 PeriodoODias = Periodo | Annotated[int, Field(gt=0)]
 

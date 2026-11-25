@@ -68,7 +68,7 @@ Desde la raíz del repositorio, ejecuta las pruebas de integración. Cada una le
 
 El flujo completo aplica las migraciones desde cero y recorre los tres roles. Incluye la compra del 15 de setiembre, el corte del 20, el cronograma francés, el pago puntual, el pago tardío y la consulta del titular.
 
-Con la API local levantada, también puedes contrastar los 29 ejercicios de clase con este comando.
+Con la API local levantada, también puedes contrastar los 29 ejercicios de clase y los dos casos de TCEA con este comando.
 
 ```powershell
 .venv\Scripts\python.exe datos_prueba\verificar_casos.py

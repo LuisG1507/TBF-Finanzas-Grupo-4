@@ -8,6 +8,10 @@
   -webkit-overflow-scrolling: touch;
 }
 
+.leyenda {
+  padding: var(--espacio-3) var(--espacio-5);
+}
+
 .tabla {
   width: 100%;
   min-width: 660px;

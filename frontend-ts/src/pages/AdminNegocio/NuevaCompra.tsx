@@ -9,11 +9,11 @@ import { Medidor } from '../../components/ui/Medidor'
 import { Tarjeta, TarjetaEncabezado } from '../../components/ui/Tarjeta'
 import { pedir } from '../../api/cliente'
 import { useAccion, useConsulta, useLista } from '../../api/consultas'
-import { TablaCronograma } from '../../components/negocio/TablaCronograma'
+import { DetalleCompra } from '../../components/negocio/DetalleCompra'
 import { EstadoConsulta } from '../../components/ui/EstadoConsulta'
 import { nombreCompleto } from '../../utils/texto'
 import type { Cliente, Compra, CreditoDisponible, ModalidadCompra, Producto } from '../../types/dominio'
-import { formatearFecha, formatearMonto, formatearPorcentaje, formatearSoles, plural, sumarMontos } from '../../utils/formato'
+import { formatearMonto, formatearPorcentaje, formatearSoles, plural, sumarMontos } from '../../utils/formato'
 import tabla from '../../components/ui/Tabla.module.css'
 import pagina from '../../styles/pagina.module.css'
 import styles from './NuevaCompra.module.css'
@@ -362,18 +362,10 @@ export function NuevaCompra() {
 }
 
 function ResultadoCompra({ compra }: { compra: Compra }) {
-  const moneda = compra.moneda.codigo_iso
   return (
     <Tarjeta>
       <TarjetaEncabezado titulo={compra.cronograma.length ? 'Cronograma de pagos' : 'Pago a fin de mes'} />
-      <ListaDatos>
-        <FilaDato etiqueta="Fecha de corte" valor={formatearFecha(compra.fecha_corte)} />
-        <FilaDato etiqueta="Primer vencimiento" valor={formatearFecha(compra.fecha_primer_pago)} />
-        <FilaDato etiqueta="Días de gracia" valor={String(compra.dias_gracia)} />
-        <FilaDato etiqueta="Interés total" valor={formatearMonto(compra.total_intereses, moneda)} />
-        <FilaDato etiqueta="Total a pagar" valor={formatearMonto(compra.total_a_pagar, moneda)} enfasis />
-      </ListaDatos>
-      {compra.cronograma.length > 0 && <TablaCronograma cuotas={compra.cronograma} moneda={moneda} />}
+      <DetalleCompra compra={compra} />
     </Tarjeta>
   )
 }

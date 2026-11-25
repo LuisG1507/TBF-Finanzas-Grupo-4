@@ -117,13 +117,13 @@ def alta_tienda(api, sistema, ruc, nombre, usuario, clave):
     })["tienda"]
 
 
-def alta_cliente(api, admin, documento, nombres, clave):
+def alta_cliente(api, admin, documento, nombres, clave, tasa_compensatoria=None):
     return api.llamar("POST", "/clientes", 201, token=admin, datos={
         "tipo_documento": "DNI", "numero_documento": documento, "nombres": nombres, "apellidos": "Validación",
         "password": clave, "condicion": {
             "moneda": "PEN", "limite_credito": "1000.00", "max_meses": 3,
             "dia_corte": 20, "hora_corte": "18:00", "dia_pago": 26, "vigente_desde": "2026-09-01",
-            "tasa_compensatoria": {"tipo": "EFECTIVA", "tasa_pct": "3", "plazo_tasa": 30},
+            "tasa_compensatoria": tasa_compensatoria or {"tipo": "EFECTIVA", "tasa_pct": "3", "plazo_tasa": 30},
             "tasa_moratoria": {"tipo": "NOMINAL", "tasa_pct": "12", "plazo_tasa": 360, "capitalizacion": 1},
         },
     })
@@ -165,6 +165,7 @@ def probar_flujo(api, clave):
     previa = api.llamar("POST", "/compras/simular", token=admin, datos=compra_tres_cuotas)
     api.comprobar(previa["id_compra"] is None and not previa["credito"]["excede_limite"], "Simulación previa sin persistir")
     api.comprobar(previa["dias_gracia"] == 11 and previa["fecha_corte"] == "2026-09-20", "Once días de gracia del enunciado")
+    api.comprobar(D(previa["tcea_pct"]) == D("42.5650862"), "TCEA de la simulación con capital original y cuotas redondeadas")
     api.comprobar(D(previa["capital_capitalizado"]) == D("303.27") and D(previa["cuota"]) == D("107.21"), "Capital y cuota francesa")
     cronograma = previa["cronograma"]
     api.comprobar([c["fecha_vencimiento"] for c in cronograma] == ["2026-10-26", "2026-11-26", "2026-12-26"],
@@ -173,8 +174,15 @@ def probar_flujo(api, clave):
                   and D(cronograma[-1]["saldo_final"]) == 0, "La última cuota absorbe el céntimo de ajuste")
     compra = api.llamar("POST", "/compras", 201, token=admin, datos=compra_tres_cuotas)
     api.comprobar(compra["cronograma"] == cronograma, "El registro conserva el cronograma simulado")
+    api.comprobar(compra["tcea_pct"] == previa["tcea_pct"], "La compra registrada conserva la TCEA de la simulación")
     fin_mes = api.llamar("POST", "/compras", 201, token=admin, datos={**compra_base, "modalidad": "FIN_DE_MES"})
     api.comprobar(fin_mes["cronograma"] == [] and D(fin_mes["total_a_pagar"]) == D("303.27"), "Pago único a fin de mes")
+    api.comprobar(D(fin_mes["tcea_pct"]) == D("42.5891343"), "TCEA para el pago único a 11 días")
+    for operacion, flujos in ((compra, [(41, D("107.21")), (71, D("107.21")), (101, D("107.22"))]),
+                              (fin_mes, [(11, D("303.27"))])):
+        factor = 1 + D(operacion["tcea_pct"]) / 100
+        valor_actual = sum(monto / factor ** (D(dias) / 360) for dias, monto in flujos)
+        api.comprobar(abs(valor_actual - D("300.00")) <= D("0.01"), "La TCEA descuenta los flujos al capital original")
     credito = api.llamar("GET", f"/clientes/{cliente_id}/credito-disponible", token=admin)
     api.comprobar(D(credito["credito_disponible"]) == D("396.73"), "Disponible después de las dos compras")
 
@@ -205,6 +213,7 @@ def probar_flujo(api, clave):
     api.llamar("POST", pago_sept, 409, token=admin, datos={"monto_pagado": "315.68", "fecha_pago": "2026-10-02"})
     cancelada = api.llamar("GET", f"/compras/{fin_mes['id_compra']}", token=admin)
     api.comprobar(cancelada["estado"] == "CANCELADA", "La compra a fin de mes queda cancelada")
+    api.comprobar(cancelada["tcea_pct"] == fin_mes["tcea_pct"], "La mora cobrada no altera la TCEA programada")
     api.llamar("POST", f"/pagos/estados-cuenta/{octu[0]['id_estado_cuenta']}", 201, token=admin,
               datos={"monto_pagado": "107.21", "fecha_pago": "2026-10-26"})
 
@@ -222,6 +231,9 @@ def probar_flujo(api, clave):
                   "La mora queda como ítem con días y monto en el estado original")
     api.comprobar(D(pagado["total_pagar"]) == sum(D(f["monto"]) for f in pagado["detalles"]), "El detalle pagado cuadra con el total")
     compras = api.llamar("GET", "/mi-cuenta/compras", token=titular)
+    api.comprobar({c["id_compra"]: c["tcea_pct"] for c in compras} == {
+        compra["id_compra"]: compra["tcea_pct"], fin_mes["id_compra"]: fin_mes["tcea_pct"],
+    }, "El titular ve la TCEA de las dos compras")
     cuotas_guardadas = next(c["cronograma"] for c in compras if c["modalidad"] == "CUOTAS")
     api.comprobar(len(compras) == 2 and [q["estado"] for q in cuotas_guardadas] == ["PAGADA", "PENDIENTE", "PENDIENTE"],
                   "El pago de octubre no adelanta cuotas futuras")
@@ -229,6 +241,44 @@ def probar_flujo(api, clave):
     api.comprobar(D(resumen["posicion"]["saldo_capital"]) == D("205.16"), "Saldo de capital después del primer pago")
     tablero = api.llamar("GET", "/dashboard", token=admin)
     api.comprobar(D(tablero["kpis"]["saldo_por_cobrar"]) == D("205.16"), "El tablero concilia con la cuenta del cliente")
+
+    nominal = alta_cliente(api, admin, "98989803", "Teresa", clave, {
+        "tipo": "NOMINAL", "tasa_pct": "36", "plazo_tasa": 360, "capitalizacion": 30,
+    })
+    for modalidad, efectiva in ((compra_tres_cuotas, compra), ({**compra_base, "modalidad": "FIN_DE_MES"}, fin_mes)):
+        simulada_nominal = api.llamar("POST", "/compras/simular", token=admin, datos={**modalidad, "cliente_id": nominal["id_cliente"]})
+        api.comprobar(simulada_nominal["tcea_pct"] == efectiva["tcea_pct"], "TNA 36 % capitalizada al mes y TEM 3 % equivalentes")
+
+
+def probar_calculadora_tcea(api):
+    ruta = "/finanzas/tcea"
+    pagos = [{"monto": "1030.00", "dias": 30}, {"monto": "2121.80", "dias": 60}, {"monto": "10927.27", "dias": 90}]
+    normal = api.llamar("POST", ruta, datos={"monto_recibido": "13000.00", "pagos": pagos})
+    tea = (D("1.03") ** 12 - 1) * 100
+    api.comprobar(abs(D(normal["tcea_pct"]) - tea) < D("0.0000001"), "Sin redondeo de los flujos, la TCEA coincide con la TEA")
+    escala = D("3.47")
+    originales = [
+        {"monto": "1030.00", "dias": 30}, {"monto": "2121.00", "dias": 60}, {"monto": "10927.00", "dias": 90},
+    ]
+    convertidos = [{**p, "monto": format(D(p["monto"]) * escala, ".2f")} for p in originales]
+    pen = api.llamar("POST", ruta, datos={"monto_recibido": "45110.00", "pagos": convertidos})
+    usd = api.llamar("POST", ruta, datos={"monto_recibido": "13000.00", "pagos": originales})
+    api.comprobar(pen == usd, "Expresar el mismo flujo en PEN o USD no cambia su tasa")
+
+    mas_caros = [{**p, "monto": str(D(p["monto"]) + 1)} for p in pagos]
+    mayor = api.llamar("POST", ruta, datos={"monto_recibido": "13000.00", "pagos": mas_caros})
+    api.comprobar(D(mayor["tcea_pct"]) > D(normal["tcea_pct"]), "Cuotas más caras en las mismas fechas elevan la TCEA")
+    mas_tarde = [{**p, "dias": p["dias"] + 11} for p in pagos]
+    menor = api.llamar("POST", ruta, datos={"monto_recibido": "13000.00", "pagos": mas_tarde})
+    api.comprobar(D(menor["tcea_pct"]) < D(normal["tcea_pct"]), "Aplazar los mismos importes reduce la tasa anual")
+
+    cero = api.llamar("POST", ruta, datos={"monto_recibido": "100.00", "pagos": [{"monto": "100.00", "dias": 30}]})
+    api.comprobar(cero["tcea_pct"] == "0.0000000", "TCEA nula serializada con siete decimales")
+    negativa = api.llamar("POST", ruta, datos={"monto_recibido": "100.00", "pagos": [{"monto": "40.00", "dias": 30}, {"monto": "50.00", "dias": 60}]})
+    api.comprobar(-100 < D(negativa["tcea_pct"]) < 0, "La bisección admite flujos que devuelven menos que el capital")
+    api.llamar("POST", ruta, 422, datos={"monto_recibido": "100.00", "pagos": [{"monto": "0.00", "dias": 30}]})
+    api.llamar("POST", ruta, 422, datos={"monto_recibido": "100.00", "fecha_compra": "2026-01-30",
+               "pagos": [{"monto": "103.00", "fecha": "2026-01-31"}]})
 
 
 def main():
@@ -248,6 +298,7 @@ def main():
         cargar_seeds()
         with servidor_local() as api:
             probar_flujo(api, clave)
+            probar_calculadora_tcea(api)
     finally:
         temporal.dispose()
         with compartido.begin() as conexion:

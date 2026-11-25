@@ -1,12 +1,15 @@
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import { useConsulta, useLista } from '../../api/consultas'
 import { Shell } from '../../components/layout/Shell'
+import { DetalleCompra } from '../../components/negocio/DetalleCompra'
 import { TablaCronograma } from '../../components/negocio/TablaCronograma'
 import { TarjetasEstadosCuenta } from '../../components/negocio/TarjetasEstadosCuenta'
 import { Campo } from '../../components/ui/Campo'
+import { Boton } from '../../components/ui/Boton'
 import { EstadoConsulta } from '../../components/ui/EstadoConsulta'
 import { Insignia } from '../../components/ui/Insignia'
 import { FilaDato, ListaDatos } from '../../components/ui/ListaDatos'
+import { Modal } from '../../components/ui/Modal'
 import { Medidor } from '../../components/ui/Medidor'
 import { Tarjeta, TarjetaEncabezado } from '../../components/ui/Tarjeta'
 import { TarjetaKpi } from '../../components/ui/TarjetaKpi'
@@ -23,6 +26,8 @@ export function MiCuenta() {
   const compras = useLista<Compra>('/mi-cuenta/compras')
   const estados = useLista<EstadoCuenta>('/mi-cuenta/estados-cuenta')
   const [compraId, setCompraId] = useState<number>()
+  const [compraDetalle, setCompraDetalle] = useState<Compra>()
+  const cerrarDetalle = useCallback(() => setCompraDetalle(undefined), [])
 
   if (!resumen.datos) return <Shell titulo="Mi cuenta"><EstadoConsulta {...resumen} /></Shell>
 
@@ -114,7 +119,7 @@ export function MiCuenta() {
               </Campo>
             )}
           />
-          <TablaCronograma cuotas={compraEnCuotas.cronograma} moneda={compraEnCuotas.moneda.codigo_iso} />
+          <TablaCronograma cuotas={compraEnCuotas.cronograma} moneda={compraEnCuotas.moneda.codigo_iso} tcea={compraEnCuotas.tcea_pct} />
         </Tarjeta>
       )}
 
@@ -128,6 +133,7 @@ export function MiCuenta() {
                   <tr>
                     <th>Fecha</th><th>Productos</th><th>Forma de pago</th>
                     <th className={tabla.numerica}>Total</th><th>Estado</th>
+                    <th><span className="solo-lectores">Detalle</span></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -138,6 +144,7 @@ export function MiCuenta() {
                       <td className={tabla.sinCorte}>{compra.modalidad === 'CUOTAS' ? plural(compra.num_cuotas, 'cuota', 'cuotas') : 'Fin de mes'}</td>
                       <td className={[tabla.numerica, tabla.fuerte].join(' ')}>{formatearMonto(compra.monto_total, compra.moneda.codigo_iso)}</td>
                       <td>{compra.estado && <Insignia texto={ESTADO_COMPRA[compra.estado].texto} tono={ESTADO_COMPRA[compra.estado].tono} />}</td>
+                      <td><Boton variante="fantasma" tamano="pequeno" onClick={() => setCompraDetalle(compra)}>Ver detalle</Boton></td>
                     </tr>
                   ))}
                 </tbody>
@@ -145,6 +152,13 @@ export function MiCuenta() {
             </div>
           )}
         </Tarjeta>
+      )}
+
+      {compraDetalle && (
+        <Modal titulo="Detalle de compra" descripcion={compraDetalle.items.map((item) => item.nombre).join(', ')}
+          onCerrar={cerrarDetalle} ancho={compraDetalle.cronograma.length ? 950 : 560}>
+          <DetalleCompra compra={compraDetalle} />
+        </Modal>
       )}
 
       <Tarjeta><TarjetaEncabezado titulo="Mis estados de cuenta" descripcion="Abre un estado para revisar sus compras, cuotas e intereses." /></Tarjeta>
