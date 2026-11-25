@@ -57,7 +57,9 @@ export function EstadosCuenta() {
       subtitulo="El listado que se genera en cada fecha de corte, con la mora identificada aparte."
       acciones={
         <>
-          <Segmentado etiquetaGrupo="Filtrar por estado" opciones={FILTROS} valor={filtro} onCambiar={setFiltro} />
+          <Campo etiqueta="Filtrar por estado" ayuda="Vencidos muestra los estados que ya pasaron su fecha de pago y siguen pendientes.">
+            <Segmentado etiquetaGrupo="Estado de cuenta" opciones={FILTROS} valor={filtro} onCambiar={setFiltro} />
+          </Campo>
           <Boton icono="mas" onClick={() => { accion.limpiarError(); setGenerando(true) }}>Generar estados</Boton>
         </>
       }
@@ -70,7 +72,7 @@ export function EstadosCuenta() {
         <Modal titulo="Generar estados de cuenta" descripcion="Se emiten los cortes del mes que ya se cumplieron." onCerrar={cerrar}>
           <form className={formulario.formulario} onSubmit={generar}>
             <EstadoConsulta error={accion.error} />
-            <Campo etiqueta="Mes de corte" obligatorio htmlFor="periodo-corte">
+            <Campo etiqueta="Mes de corte" ayuda="Elige el mes del cierre de compras, aunque la fecha de pago caiga al mes siguiente." obligatorio htmlFor="periodo-corte">
               <input id="periodo-corte" name="periodo" type="month" className="campo-entrada"
                 max={hoyLima().slice(0, 7)} defaultValue={hoyLima().slice(0, 7)} required />
             </Campo>

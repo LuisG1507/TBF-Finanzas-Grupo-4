@@ -104,7 +104,7 @@ export function MiCuenta() {
             descripcion={compraEnCuotas.items.map((item) => item.nombre).join(', ') + ' · ' + formatearFecha(compraEnCuotas.fecha_hora_compra)
               + ' · ' + plural(compraEnCuotas.dias_gracia, 'día de gracia', 'días de gracia')}
             accion={comprasConCuotas.length > 1 && (
-              <Campo etiqueta="Compra" htmlFor="mi-cronograma">
+              <Campo etiqueta="Compra" ayuda="Elige la compra cuyo cronograma quieres consultar." htmlFor="mi-cronograma">
                 <select id="mi-cronograma" className="campo-entrada" value={compraEnCuotas.id_compra ?? ''}
                   onChange={(evento) => setCompraId(Number(evento.target.value))}>
                   {comprasConCuotas.map((compra) => (
@@ -147,7 +147,7 @@ export function MiCuenta() {
         </Tarjeta>
       )}
 
-      <Tarjeta><TarjetaEncabezado titulo="Mis estados de cuenta" /></Tarjeta>
+      <Tarjeta><TarjetaEncabezado titulo="Mis estados de cuenta" descripcion="Abre un estado para revisar sus compras, cuotas e intereses." /></Tarjeta>
       <EstadoConsulta {...estados} />
       {estados.datos?.length === 0 && <Tarjeta><p className={tabla.vacio}>Todavía no se han emitido estados de cuenta.</p></Tarjeta>}
       {estados.datos && <TarjetasEstadosCuenta estados={estados.datos} ruta="/mi-cuenta/estados-cuenta" />}

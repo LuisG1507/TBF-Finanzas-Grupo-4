@@ -334,6 +334,7 @@ export function NuevaCompra() {
             />
             <p className={pagina.nota}>
               {previa ? 'Con esta compra usaría ' : 'Actualmente usa '}{formatearPorcentaje(limite > 0 ? usoConEstaCompra / limite : 0)} de su límite.
+              {previa && ' Es una proyección. Bizon vuelve a verificar el crédito disponible al registrar.'}
             </p>
           </div>}
 
