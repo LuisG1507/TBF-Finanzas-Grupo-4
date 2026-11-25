@@ -5,7 +5,6 @@ from pydantic import BaseModel, Field
 
 
 class EntradaRegistrarPago(BaseModel):
-    usuario_id: int = Field(gt=0, description="Usuario (administrador del negocio) que registra el pago")
     monto_pagado: Decimal = Field(gt=0, decimal_places=2, examples=["916.17"])
     fecha_pago: date | None = Field(default=None, examples=["2026-10-31"], description="Fecha real del pago; por defecto, hoy")
 
@@ -20,6 +19,7 @@ class RespuestaExigible(BaseModel):
     capital: Decimal
     interes_comp: Decimal
     interes_mora: Decimal
+    interes_comp_atraso: Decimal
     total_exigible: Decimal
 
 

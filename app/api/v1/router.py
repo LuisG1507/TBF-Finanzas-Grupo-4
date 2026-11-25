@@ -1,8 +1,15 @@
 from fastapi import APIRouter
 
 from app.api.v1.endpoints import (
-    endpoints_auth, endpoints_catalogos, endpoints_clientes, endpoints_compras, endpoints_finanzas, endpoints_pagos,
-    endpoints_productos, endpoints_tiendas,
+    endpoints_auth,
+    endpoints_catalogos,
+    endpoints_clientes,
+    endpoints_compras,
+    endpoints_estados_cuenta,
+    endpoints_finanzas,
+    endpoints_pagos,
+    endpoints_productos,
+    endpoints_tiendas,
 )
 
 router = APIRouter()
@@ -13,5 +20,6 @@ router.include_router(endpoints_catalogos.router)
 router.include_router(endpoints_productos.router)
 router.include_router(endpoints_clientes.router)
 router.include_router(endpoints_compras.router)
+router.include_router(endpoints_estados_cuenta.router)
 router.include_router(endpoints_pagos.router)
 router.include_router(endpoints_finanzas.router)

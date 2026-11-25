@@ -4,7 +4,7 @@ from decimal import Decimal
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models import Bitacora, CondicionCredito, Cuota, EstadoCuenta, Pago, Usuario
+from app.models import Bitacora, Cliente, CondicionCredito, Cuota, EstadoCuenta, Pago, Usuario
 from app.models.enumeraciones import (
     AccionBitacora,
     EntidadBitacora,
@@ -39,13 +39,26 @@ def _condicion_vigente(sesion: Session, cliente_id: int, fecha: date) -> Condici
     return condicion
 
 
-def calcular_exigible(sesion: Session, id_estado_cuenta: int, fecha_pago: date, monto: Decimal | None = None):
-    """Deuda exigible del estado de cuenta a la fecha de pago. Sin monto, se asume el pago exacto."""
+def _estado_de_tienda(sesion: Session, id_estado_cuenta: int, tienda_id: int | None) -> EstadoCuenta:
+    """El estado de cuenta, solo si es de un cliente de la tienda indicada (otra tienda = 404, como si no existiera)."""
     estado = sesion.get(EstadoCuenta, id_estado_cuenta)
     if estado is None:
         raise ErrorPago(404, "El estado de cuenta no existe")
+    if tienda_id is not None:
+        cliente = sesion.get(Cliente, estado.cliente_id)
+        if cliente is None or cliente.tienda_id != tienda_id:
+            raise ErrorPago(404, "El estado de cuenta no existe")
+    return estado
+
+
+def calcular_exigible(
+    sesion: Session, id_estado_cuenta: int, fecha_pago: date, monto: Decimal | None = None, tienda_id: int | None = None
+):
+    """Deuda exigible del estado de cuenta a la fecha de pago. Sin monto, se asume el pago exacto."""
+    estado = _estado_de_tienda(sesion, id_estado_cuenta, tienda_id)
     condicion = _condicion_vigente(sesion, estado.cliente_id, estado.fecha_pago)
     tipo = TipoTasa(condicion.tipo_tasa_mora.value)
+    tipo_comp = TipoTasa(condicion.tipo_tasa_comp.value)
 
     def procesar(monto_pagado: Decimal):
         return pagos.procesar_pago(
@@ -60,6 +73,10 @@ def calcular_exigible(sesion: Session, id_estado_cuenta: int, fecha_pago: date, 
             tipo_mora=tipo,
             plazo_mora_dias=condicion.plazo_tasa_mora_dias,
             capitalizacion_mora_dias=condicion.capitaliz_mora_dias if tipo == TipoTasa.NOMINAL else None,
+            tasa_comp_pct=condicion.tasa_compensatoria,
+            tipo_comp=tipo_comp,
+            plazo_comp_dias=condicion.plazo_tasa_comp_dias,
+            capitalizacion_comp_dias=condicion.capitaliz_comp_dias if tipo_comp == TipoTasa.NOMINAL else None,
         )
 
     if monto is None:
@@ -67,10 +84,12 @@ def calcular_exigible(sesion: Session, id_estado_cuenta: int, fecha_pago: date, 
     return estado, procesar(monto)
 
 
-def registrar_pago(sesion: Session, id_estado_cuenta: int, usuario_id: int, monto_pagado: Decimal, fecha_pago: date):
+def registrar_pago(
+    sesion: Session, id_estado_cuenta: int, usuario_id: int, monto_pagado: Decimal, fecha_pago: date, tienda_id: int | None = None
+):
     """Registra la cancelacion completa de un estado de cuenta: mora -> interes compensatorio -> capital.
     Rechaza pagos parciales y devuelve el excedente; no adelanta cuotas futuras."""
-    estado, resultado = calcular_exigible(sesion, id_estado_cuenta, fecha_pago, monto_pagado)
+    estado, resultado = calcular_exigible(sesion, id_estado_cuenta, fecha_pago, monto_pagado, tienda_id)
     if estado.estado == EstadoCuentaEstado.PAGADO:
         raise ErrorPago(409, "El estado de cuenta ya fue pagado")
     if sesion.get(Usuario, usuario_id) is None:
@@ -96,6 +115,7 @@ def registrar_pago(sesion: Session, id_estado_cuenta: int, usuario_id: int, mont
     )
     sesion.add(pago)
 
+    estado.total_interes_comp = estado.total_interes_comp + resultado.interes_comp_atraso
     estado.total_interes_mora = resultado.interes_mora
     estado.total_pagar = resultado.total_exigible
     estado.estado = EstadoCuentaEstado.PAGADO
@@ -124,6 +144,7 @@ def registrar_pago(sesion: Session, id_estado_cuenta: int, usuario_id: int, mont
             "monto_aplicado": str(resultado.monto_aplicado),
             "mora": str(resultado.aplicado_mora),
             "interes_comp": str(resultado.aplicado_interes_comp),
+            "interes_comp_atraso": str(resultado.interes_comp_atraso),
             "capital": str(resultado.aplicado_capital),
             "excedente_devuelto": str(resultado.excedente_devuelto),
             "dias_mora": resultado.dias_mora,
