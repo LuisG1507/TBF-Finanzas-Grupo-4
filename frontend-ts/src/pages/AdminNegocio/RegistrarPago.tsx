@@ -1,5 +1,8 @@
-import { useEffect, useState } from 'react'
-import { SIN_CONEXION, consultarExigible, procesarPago, type RespuestaPago } from '../../api/pagos'
+import { useState } from 'react'
+import { ErrorApi } from '../../api/cliente'
+import { useAccion, useConsulta, useLista } from '../../api/consultas'
+import { registrarPago, rutaExigible, type RespuestaExigible, type RespuestaPago } from '../../api/pagos'
+import { EstadoConsulta } from '../../components/ui/EstadoConsulta'
 import { Shell } from '../../components/layout/Shell'
 import { Aviso } from '../../components/ui/Aviso'
 import { Boton } from '../../components/ui/Boton'
@@ -7,25 +10,12 @@ import { Campo } from '../../components/ui/Campo'
 import { Insignia } from '../../components/ui/Insignia'
 import { FilaDato, ListaDatos } from '../../components/ui/ListaDatos'
 import { Tarjeta, TarjetaEncabezado } from '../../components/ui/Tarjeta'
-import { useDatos } from '../../contexts/datos'
-import { estadosCuentaDemo, nombreCompleto } from '../../data/mock'
+import type { Cliente, EstadoCuenta } from '../../types/dominio'
+import { nombreCompleto } from '../../utils/texto'
 import { ESTADO_CUENTA } from '../../utils/etiquetas'
-import { formatearFecha, formatearSoles } from '../../utils/formato'
+import { formatearFecha, formatearMonto, hoyLima } from '../../utils/formato'
 import pagina from '../../styles/pagina.module.css'
 import styles from './RegistrarPago.module.css'
-
-/** El estado de cuenta más antiguo que el cliente todavía no paga (pagados: los cobrados en esta sesión). */
-function estadoCuentaPendienteDe(clienteId: number, pagados: number[] = []) {
-  return estadosCuentaDemo.find(
-    (candidato) => candidato.cliente_id === clienteId && candidato.estado !== 'PAGADO' && !pagados.includes(candidato.id_estado_cuenta),
-  )
-}
-
-/** La fecha de hoy en formato AAAA-MM-DD, en hora local. */
-function hoyIso() {
-  const hoy = new Date()
-  return `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}-${String(hoy.getDate()).padStart(2, '0')}`
-}
 
 const SUBTITULO = 'El pago debe cubrir todo lo adeudado: no se aceptan pagos parciales y el excedente se devuelve.'
 
@@ -33,85 +23,65 @@ const SUBTITULO = 'El pago debe cubrir todo lo adeudado: no se aceptan pagos par
 const PRELACION = ['Interés moratorio', 'Interés compensatorio', 'Capital']
 
 export function RegistrarPago() {
-  // Los clientes salen de la lista compartida: los recién registrados también aparecen aquí.
-  const { clientes } = useDatos()
-  const clientesActivos = clientes.filter((candidato) => candidato.activo)
-
-  // La pantalla abre en el primer cliente que tiene algo por pagar.
-  const [clienteId, setClienteId] = useState(
-    () => (clientesActivos.find((candidato) => estadoCuentaPendienteDe(candidato.id_cliente)) ?? clientesActivos[0])?.id_cliente ?? 0,
-  )
+  const cargaClientes = useLista<Cliente>('/clientes?activo=true')
+  const cargaEstados = useLista<EstadoCuenta>('/estados-cuenta')
+  const clientesActivos = cargaClientes.datos ?? []
+  const pendientes = (cargaEstados.datos ?? []).filter((estado) => estado.estado !== 'PAGADO')
+    .sort((a, b) => a.fecha_pago.localeCompare(b.fecha_pago) || a.id_estado_cuenta - b.id_estado_cuenta)
+  const [clienteId, setClienteId] = useState<number>()
+  const [estadoId, setEstadoId] = useState<number>()
   const [monto, setMonto] = useState('')
-  const [fechaPago, setFechaPago] = useState(hoyIso)
-  // Lo que el backend calcula para la fecha elegida (mora incluida) y su respuesta al registrar.
-  const [exigible, setExigible] = useState<RespuestaPago | null>(null)
-  const [resultado, setResultado] = useState<RespuestaPago | null>(null)
-  const [error, setError] = useState<string | null>(null)
-  const [enviando, setEnviando] = useState(false)
-  // Estados de cuenta cobrados en esta sesión; el último es el que se acaba de pagar.
-  const [pagados, setPagados] = useState<number[]>([])
+  const [fechaPago, setFechaPago] = useState(hoyLima)
+  const [pagado, setPagado] = useState<{ estado: EstadoCuenta; resultado: RespuestaPago } | null>(null)
+  const accion = useAccion()
 
-  const cliente = clientesActivos.find((candidato) => candidato.id_cliente === clienteId) ?? clientesActivos[0]
-  // Mientras se muestra el resultado de un pago aceptado, se sigue viendo el estado de cuenta recién pagado.
-  const yaCobrados = resultado?.aceptado ? pagados.slice(0, -1) : pagados
-  const estadoCuenta = cliente ? estadoCuentaPendienteDe(cliente.id_cliente, yaCobrados) : undefined
-  const idEstadoCuenta = estadoCuenta?.id_estado_cuenta
-  const pagoAceptado = resultado?.aceptado === true
-
-  // Cada vez que cambia el cliente o la fecha de pago, el backend recalcula la mora y el total.
-  useEffect(() => {
-    if (!estadoCuenta || !cliente || !fechaPago || pagoAceptado) return
-    let vigente = true
-    consultarExigible(estadoCuenta, cliente.condicion, fechaPago)
-      .then((respuesta) => {
-        if (!vigente) return
-        setExigible(respuesta)
-        setError(null)
-      })
-      .catch(() => {
-        if (!vigente) return
-        setExigible(null)
-        setError(SIN_CONEXION)
-      })
-    return () => {
-      vigente = false
-    }
-    // Solo depende de qué estado de cuenta se paga y en qué fecha.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [idEstadoCuenta, fechaPago, pagoAceptado])
-
-  if (clientesActivos.length === 0) {
-    return (
-      <Shell titulo="Registrar pago" subtitulo={SUBTITULO}>
-        <Aviso tono="info">Todavía no hay clientes activos. Regístralos primero en Clientes.</Aviso>
-      </Shell>
-    )
-  }
-
-  // La mora y el total salen del backend; sin conexión se muestran los del estado de cuenta emitido.
-  const interesMora = exigible?.interes_mora ?? estadoCuenta?.total_interes_mora ?? '0'
-  const totalAPagar = exigible?.total_exigible ?? estadoCuenta?.total_pagar ?? '0'
+  const cliente = clientesActivos.find((c) => c.id_cliente === clienteId)
+    ?? clientesActivos.find((c) => c.id_cliente === pendientes[0]?.cliente_id)
+    ?? clientesActivos[0]
+  const delCliente = pendientes.filter((e) => e.cliente_id === cliente?.id_cliente)
+  const estadoCuenta = pagado?.estado ?? delCliente.find((e) => e.id_estado_cuenta === estadoId) ?? delCliente[0]
+  const resultado = pagado?.resultado
+  const pagoAceptado = Boolean(resultado)
+  const consulta = useConsulta<RespuestaExigible>(
+    !pagoAceptado && estadoCuenta && fechaPago ? rutaExigible(estadoCuenta.id_estado_cuenta, fechaPago) : null,
+  )
+  const exigible = resultado ?? consulta.datos
+  const moneda = estadoCuenta?.moneda?.codigo_iso
+  const dinero = (valor: string | number) => formatearMonto(valor, moneda)
+  const interesMora = exigible?.interes_mora ?? '0'
+  const totalAPagar = exigible?.total_exigible
   const tieneMora = Number(interesMora) > 0
 
   function reiniciar() {
     setMonto('')
-    setResultado(null)
-    setExigible(null)
+    setPagado(null)
+    accion.limpiarError()
   }
 
-  async function alRegistrar() {
-    if (!estadoCuenta) return
-    setEnviando(true)
-    try {
-      const respuesta = await procesarPago(estadoCuenta, cliente.condicion, fechaPago, Number(monto).toFixed(2))
-      setResultado(respuesta)
-      setError(null)
-      if (respuesta.aceptado) setPagados((actuales) => [...actuales, estadoCuenta.id_estado_cuenta])
-    } catch {
-      setError(SIN_CONEXION)
-    } finally {
-      setEnviando(false)
-    }
+  function alRegistrar() {
+    if (!estadoCuenta || !consulta.datos || !fechaPago) return
+    void accion.ejecutar(async () => {
+      try {
+        const respuesta = await registrarPago(estadoCuenta.id_estado_cuenta, fechaPago, monto)
+        setPagado({ estado: estadoCuenta, resultado: respuesta })
+        cargaEstados.recargar()
+      } catch (error) {
+        if (error instanceof ErrorApi && error.detalle && typeof error.detalle === 'object' && 'faltante' in error.detalle) {
+          throw new Error(error.message + '. Faltan ' + dinero(String(error.detalle.faltante)) + '.')
+        }
+        throw error
+      }
+    })
+  }
+
+  if (!cliente || (!cargaEstados.datos && !pagado)) {
+    return (
+      <Shell titulo="Registrar pago" subtitulo={SUBTITULO}>
+        <EstadoConsulta {...cargaClientes} />
+        <EstadoConsulta {...cargaEstados} />
+        {cargaClientes.datos?.length === 0 && <Aviso tono="info">Todavía no hay clientes activos.</Aviso>}
+      </Shell>
+    )
   }
 
   return (
@@ -124,8 +94,10 @@ export function RegistrarPago() {
               id="cliente_pago"
               className="campo-entrada"
               value={cliente.id_cliente}
+              disabled={accion.ocupado}
               onChange={(evento) => {
                 setClienteId(Number(evento.target.value))
+                setEstadoId(undefined)
                 reiniciar()
               }}
             >
@@ -137,6 +109,17 @@ export function RegistrarPago() {
             </select>
           </Campo>
 
+          {!pagoAceptado && delCliente.length > 1 && (
+            <Campo etiqueta="Estado de cuenta a pagar" htmlFor="estado-pago">
+              <select id="estado-pago" className="campo-entrada" value={estadoCuenta?.id_estado_cuenta ?? ''}
+                disabled={accion.ocupado}
+                onChange={(evento) => { setEstadoId(Number(evento.target.value)); reiniciar() }}>
+                {delCliente.map((estado) => <option key={estado.id_estado_cuenta} value={estado.id_estado_cuenta}>
+                  {formatearFecha(estado.fecha_pago)} · {formatearMonto(estado.total_pagar, estado.moneda?.codigo_iso)}
+                </option>)}
+              </select>
+            </Campo>
+          )}
           {!estadoCuenta ? (
             <div className={styles.bloque}>
               <Aviso tono="info" titulo={`${nombreCompleto(cliente)} no tiene nada por pagar`}>
@@ -163,10 +146,13 @@ export function RegistrarPago() {
                     valor={exigible ? String(exigible.dias_mora) : '—'}
                     tono={tieneMora ? 'peligro' : undefined}
                   />
-                  <FilaDato etiqueta="Capital" valor={formatearSoles(estadoCuenta.total_capital)} separada />
-                  <FilaDato etiqueta="Interés compensatorio" valor={formatearSoles(estadoCuenta.total_interes_comp)} />
-                  <FilaDato etiqueta="Interés moratorio" valor={formatearSoles(interesMora)} tono={tieneMora ? 'peligro' : undefined} />
-                  <FilaDato etiqueta="Total a pagar" valor={formatearSoles(totalAPagar)} enfasis separada />
+                  <FilaDato etiqueta="Capital" valor={dinero(estadoCuenta.total_capital)} separada />
+                  <FilaDato etiqueta="Interés compensatorio" valor={dinero(estadoCuenta.total_interes_comp)} />
+                  {exigible && Number(exigible.interes_comp_atraso) > 0 && (
+                    <FilaDato etiqueta="Compensatorio por atraso" valor={dinero(exigible.interes_comp_atraso)} />
+                  )}
+                  <FilaDato etiqueta="Interés moratorio" valor={dinero(interesMora)} tono={tieneMora ? 'peligro' : undefined} />
+                  <FilaDato etiqueta="Total a pagar" valor={totalAPagar ? dinero(totalAPagar) : '—'} enfasis separada />
                 </ListaDatos>
               </div>
 
@@ -182,10 +168,10 @@ export function RegistrarPago() {
                     type="date"
                     className="campo-entrada"
                     value={fechaPago}
-                    disabled={pagoAceptado}
+                    disabled={pagoAceptado || accion.ocupado}
                     onChange={(evento) => {
                       setFechaPago(evento.target.value)
-                      setResultado(null)
+                      accion.limpiarError()
                     }}
                   />
                 </Campo>
@@ -193,7 +179,7 @@ export function RegistrarPago() {
 
               <div className={styles.bloque}>
                 <Campo
-                  etiqueta="Monto recibido (S/)"
+                  etiqueta={moneda === 'USD' ? 'Monto recibido (US$)' : 'Monto recibido (S/)'}
                   ayuda="Debe cubrir el total a pagar, que ya incluye la mora. Si el cliente entrega más, el sistema indica cuánto devolverle."
                   obligatorio
                   htmlFor="monto"
@@ -205,36 +191,29 @@ export function RegistrarPago() {
                     min="0"
                     inputMode="decimal"
                     className="campo-entrada"
-                    placeholder={Number(totalAPagar).toFixed(2)}
+                    placeholder={totalAPagar}
                     value={monto}
-                    disabled={pagoAceptado}
+                    disabled={pagoAceptado || accion.ocupado}
                     onChange={(evento) => {
                       setMonto(evento.target.value)
-                      setResultado(null)
+                      accion.limpiarError()
                     }}
                   />
                 </Campo>
               </div>
 
               <div className={[styles.bloque, pagina.pila].join(' ')}>
-                {error && <Aviso tono="peligro">{error}</Aviso>}
-
-                {resultado && !resultado.aceptado && (
-                  <Aviso tono="peligro" titulo="Pago rechazado">
-                    El monto no cubre lo adeudado ({formatearSoles(resultado.total_exigible)}). No se permiten pagos parciales: faltan{' '}
-                    {formatearSoles(Number(resultado.total_exigible) - Number(monto))}.
-                  </Aviso>
-                )}
-
-                {resultado && resultado.aceptado && (
+                <EstadoConsulta {...consulta} />
+                <EstadoConsulta error={accion.error} />
+                {resultado && (
                   <Aviso tono="exito" titulo="Pago registrado. Así se aplicó:">
                     <ol className={styles.aplicacion}>
-                      <li>Interés moratorio: {formatearSoles(resultado.aplicado_mora)}</li>
-                      <li>Interés compensatorio: {formatearSoles(resultado.aplicado_interes_comp)}</li>
-                      <li>Capital: {formatearSoles(resultado.aplicado_capital)}</li>
+                      <li>Interés moratorio: {dinero(resultado.aplicado_mora)}</li>
+                      <li>Interés compensatorio: {dinero(resultado.aplicado_interes_comp)}</li>
+                      <li>Capital: {dinero(resultado.aplicado_capital)}</li>
                     </ol>
                     {Number(resultado.excedente_devuelto) > 0 && (
-                      <p>Devuelve al cliente {formatearSoles(resultado.excedente_devuelto)} de excedente.</p>
+                      <p>Devuelve al cliente {dinero(resultado.excedente_devuelto)} de excedente.</p>
                     )}
                   </Aviso>
                 )}
@@ -244,8 +223,8 @@ export function RegistrarPago() {
                     Registrar otro pago
                   </Boton>
                 ) : (
-                  <Boton anchoCompleto onClick={alRegistrar} disabled={monto === '' || Number(monto) <= 0 || enviando}>
-                    {enviando ? 'Registrando…' : 'Registrar pago'}
+                  <Boton anchoCompleto onClick={alRegistrar} disabled={monto === '' || Number(monto) <= 0 || !consulta.datos || accion.ocupado}>
+                    {accion.ocupado ? 'Registrando…' : 'Registrar pago'}
                   </Boton>
                 )}
               </div>

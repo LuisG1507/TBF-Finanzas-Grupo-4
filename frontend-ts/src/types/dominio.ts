@@ -14,7 +14,12 @@ export type EstadoCuentaEstado = 'EMITIDO' | 'PAGADO' | 'VENCIDO'
 
 export type TipoItemEstadoCuenta = 'COMPRA' | 'CUOTA' | 'INT_COMPENSATORIO' | 'INT_MORATORIO'
 
-export type EstadoPago = 'REGISTRADO' | 'ANULADO'
+export type MonedaCodigo = 'PEN' | 'USD'
+
+export interface Moneda {
+  codigo_iso: MonedaCodigo
+  simbolo: string
+}
 
 export interface Tienda {
   id_tienda: number
@@ -22,28 +27,22 @@ export interface Tienda {
   razon_social: string
   nombre_comercial: string
   giro: string
-  direccion?: string
-  telefono?: string
-  email?: string
-  activo: boolean
-}
-
-export interface Usuario {
-  id_usuario: number
-  username: string
-  rol: RolCodigo
-  tienda_id?: number
+  direccion: string | null
+  telefono: string | null
+  email: string | null
   activo: boolean
 }
 
 export interface Proveedor {
   id_proveedor: number
   razon_social: string
+  activo: boolean
 }
 
 export interface Marca {
   id_marca: number
   nombre: string
+  activo: boolean
 }
 
 export interface UnidadMedida {
@@ -56,11 +55,11 @@ export interface Producto {
   id_producto: number
   codigo: string
   nombre: string
-  descripcion?: string
-  proveedor_id?: number
-  marca_id?: number
-  unidad_id: number
-  imagen_url?: string
+  descripcion: string | null
+  imagen_url: string | null
+  proveedor: Pick<Proveedor, 'id_proveedor' | 'razon_social'> | null
+  marca: Pick<Marca, 'id_marca' | 'nombre'> | null
+  unidad: UnidadMedida
   precio_contado: string
   precio_lista: string
   permite_fin_de_mes: boolean
@@ -68,23 +67,25 @@ export interface Producto {
   activo: boolean
 }
 
+export interface TasaPactada {
+  tipo: TipoTasa
+  tasa_pct: string
+  plazo_dias: number
+  capitalizacion_dias: number | null
+}
+
 export interface CondicionCredito {
   id_condicion: number
-  cliente_id: number
-  moneda_codigo: 'PEN'
-  tasa_compensatoria: string
-  tipo_tasa_comp: TipoTasa
-  plazo_tasa_comp_dias: number
-  capitaliz_comp_dias?: number
-  tasa_moratoria: string
-  tipo_tasa_mora: TipoTasa
-  plazo_tasa_mora_dias: number
-  capitaliz_mora_dias?: number
+  moneda: Moneda
+  tasa_compensatoria: TasaPactada
+  tasa_moratoria: TasaPactada
   limite_credito: string
   max_meses: number
   dia_corte: number
   hora_corte: string
   dia_pago: number
+  vigente_desde: string
+  vigente_hasta: string | null
 }
 
 export interface Cliente {
@@ -93,39 +94,55 @@ export interface Cliente {
   numero_documento: string
   nombres: string
   apellidos: string
-  telefono?: string
-  email?: string
+  telefono: string | null
+  direccion: string | null
+  email: string | null
+  usuario: string
   activo: boolean
-  condicion: CondicionCredito
+  condicion: CondicionCredito | null
+}
+
+export interface CreditoDisponible {
+  moneda: Moneda
+  limite_credito: string
+  capital_pendiente: string
+  credito_disponible: string
 }
 
 export interface DetalleCompra {
-  id_detalle: number
   producto_id: number
+  codigo: string
+  nombre: string
   cantidad: string
   precio_unitario: string
   subtotal: string
 }
 
 export interface Compra {
-  id_compra: number
-  cliente_id: number
+  id_compra: number | null
+  cliente: { id_cliente: number; nombre: string; documento: string }
   fecha_hora_compra: string
   modalidad: ModalidadCompra
+  moneda: Moneda
   num_cuotas: number
   monto_total: string
-  fecha_corte_asignada: string
+  fecha_corte: string
   fecha_primer_pago: string
   dias_gracia: number
   capital_capitalizado: string
-  estado: EstadoCompra
-  detalles: DetalleCompra[]
+  interes_gracia: string
+  tep_aplicada: string
+  cuota: string | null
+  total_intereses: string
+  total_a_pagar: string
+  estado: EstadoCompra | null
+  items: DetalleCompra[]
+  cronograma: Cuota[]
+  credito: Omit<CreditoDisponible, 'moneda'> & { excede_limite: boolean } | null
 }
 
 export interface Cuota {
-  id_cuota: number
-  compra_id: number
-  numero_cuota: number
+  numero: number
   fecha_vencimiento: string
   saldo_inicial: string
   interes: string
@@ -138,9 +155,11 @@ export interface Cuota {
 export interface EstadoCuentaDetalle {
   id_detalle_ec: number
   tipo_item: TipoItemEstadoCuenta
-  fecha_referencia?: string
-  dias_transcurridos?: number
-  tasa_aplicada?: string
+  concepto: string
+  fecha_referencia: string | null
+  fecha_hora_compra: string | null
+  dias_transcurridos: number | null
+  tasa_aplicada: string | null
   monto: string
   orden: number
 }
@@ -148,6 +167,8 @@ export interface EstadoCuentaDetalle {
 export interface EstadoCuenta {
   id_estado_cuenta: number
   cliente_id: number
+  cliente_nombre: string
+  moneda: Moneda | null
   anio: number
   mes: number
   fecha_corte: string
@@ -157,16 +178,8 @@ export interface EstadoCuenta {
   total_interes_mora: string
   total_pagar: string
   estado: EstadoCuentaEstado
-  detalles: EstadoCuentaDetalle[]
 }
 
-export interface Pago {
-  id_pago: number
-  cliente_id: number
-  fecha_hora_pago: string
-  monto_pagado: string
-  monto_mora_aplicado: string
-  monto_interes_comp_aplicado: string
-  monto_capital_aplicado: string
-  estado: EstadoPago
+export interface EstadoCuentaCompleto extends EstadoCuenta {
+  detalles: EstadoCuentaDetalle[]
 }

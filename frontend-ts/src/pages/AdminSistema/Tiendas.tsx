@@ -7,7 +7,9 @@ import { Campo } from '../../components/ui/Campo'
 import { Insignia } from '../../components/ui/Insignia'
 import { Modal } from '../../components/ui/Modal'
 import { Tarjeta } from '../../components/ui/Tarjeta'
-import { siguienteId, useDatos } from '../../contexts/datos'
+import { pedir } from '../../api/cliente'
+import { useAccion, useLista } from '../../api/consultas'
+import { EstadoConsulta } from '../../components/ui/EstadoConsulta'
 import type { Tienda } from '../../types/dominio'
 import { plural } from '../../utils/formato'
 import { coincide } from '../../utils/texto'
@@ -18,7 +20,9 @@ import pagina from '../../styles/pagina.module.css'
 const GIROS = ['Bodega', 'Panadería', 'Carnicería', 'Pollería', 'Pescadería', 'Bazar', 'Licorería', 'Peluquería', 'Spa', 'Otro']
 
 export function Tiendas() {
-  const { tiendas, agregarTienda, alternarTienda } = useDatos()
+  const carga = useLista<Tienda>('/tiendas')
+  const tiendas = carga.datos ?? []
+  const accion = useAccion()
   const [modalAbierto, setModalAbierto] = useState(false)
   const [consulta, setConsulta] = useState('')
   const cerrarModal = useCallback(() => setModalAbierto(false), [])
@@ -31,19 +35,32 @@ export function Tiendas() {
   function alCrearTienda(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault()
     const datos = new FormData(evento.currentTarget)
-    const nueva: Tienda = {
-      id_tienda: siguienteId(tiendas.map((tienda) => tienda.id_tienda)),
-      ruc: String(datos.get('ruc')),
-      razon_social: String(datos.get('razon_social')),
-      nombre_comercial: String(datos.get('nombre_comercial')),
-      giro: String(datos.get('giro')),
-      direccion: String(datos.get('direccion') || '') || undefined,
-      telefono: String(datos.get('telefono') || '') || undefined,
-      email: String(datos.get('email') || '') || undefined,
-      activo: true,
-    }
-    agregarTienda(nueva)
-    setModalAbierto(false)
+    void accion.ejecutar(async () => {
+      await pedir('/tiendas', {
+        method: 'POST',
+        cuerpo: {
+          ruc: datos.get('ruc'),
+          razon_social: datos.get('razon_social'),
+          nombre_comercial: datos.get('nombre_comercial'),
+          giro: datos.get('giro'),
+          direccion: datos.get('direccion') || null,
+          telefono: datos.get('telefono') || null,
+          email: datos.get('email') || null,
+          admin_username: datos.get('usuario_admin'),
+          admin_password: datos.get('clave_admin'),
+        },
+      })
+      carga.recargar()
+      setModalAbierto(false)
+    })
+  }
+
+  function alternarTienda(tienda: Tienda) {
+    const operacion = tienda.activo ? 'baja' : 'alta'
+    void accion.ejecutar(async () => {
+      await pedir('/tiendas/' + tienda.id_tienda + '/' + operacion, { method: 'POST' })
+      carga.recargar()
+    })
   }
 
   return (
@@ -51,11 +68,13 @@ export function Tiendas() {
       titulo="Tiendas"
       subtitulo="Da de alta o de baja a las tiendas que operan en la plataforma."
       acciones={
-        <Boton icono="mas" onClick={() => setModalAbierto(true)}>
+        <Boton icono="mas" onClick={() => { accion.limpiarError(); setModalAbierto(true) }}>
           Nueva tienda
         </Boton>
       }
     >
+      <EstadoConsulta {...carga} />
+      {!modalAbierto && <EstadoConsulta error={accion.error} />}
       <Tarjeta relleno="ninguno">
         <div className={pagina.barraTabla}>
           <p className={pagina.barraTablaTexto}>
@@ -106,7 +125,7 @@ export function Tiendas() {
                   </td>
                   <td>
                     <div className={tabla.celdaAcciones}>
-                      <Boton variante="fantasma" tamano="pequeno" onClick={() => alternarTienda(tienda.id_tienda)}>
+                      <Boton variante="fantasma" tamano="pequeno" disabled={accion.ocupado} onClick={() => alternarTienda(tienda)}>
                         {tienda.activo ? 'Dar de baja' : 'Reactivar'}
                       </Boton>
                     </div>
@@ -116,7 +135,7 @@ export function Tiendas() {
             </tbody>
           </table>
         </div>
-        {visibles.length === 0 && <p className={tabla.vacio}>Ninguna tienda coincide con «{consulta}».</p>}
+        {carga.datos && visibles.length === 0 && <p className={tabla.vacio}>Ninguna tienda coincide con «{consulta}».</p>}
       </Tarjeta>
 
       {modalAbierto && (
@@ -127,6 +146,7 @@ export function Tiendas() {
           ancho={640}
         >
           <form className={formulario.formulario} onSubmit={alCrearTienda}>
+            <EstadoConsulta error={accion.error} />
             <div className={formulario.seccion}>
               <div className={formulario.rejilla2}>
                 <Campo etiqueta="RUC" ayuda="11 dígitos, tal como figura en SUNAT." obligatorio htmlFor="ruc">
@@ -219,7 +239,7 @@ export function Tiendas() {
               <Boton variante="secundario" onClick={cerrarModal}>
                 Cancelar
               </Boton>
-              <Boton type="submit">Crear tienda</Boton>
+              <Boton type="submit" disabled={accion.ocupado}>{accion.ocupado ? 'Creando…' : 'Crear tienda'}</Boton>
             </div>
           </form>
         </Modal>

@@ -1,53 +1,14 @@
 import { useState, type FormEvent } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { NOMBRE_APLICACION } from '../../components/layout/navegacion'
+import { Navigate } from 'react-router-dom'
+import { useAccion } from '../../api/consultas'
+import { NAV_POR_ROL, NOMBRE_APLICACION } from '../../components/layout/navegacion'
 import { Boton } from '../../components/ui/Boton'
 import { Campo } from '../../components/ui/Campo'
 import { Icono, type NombreIcono } from '../../components/ui/Icono'
-import { Segmentado } from '../../components/ui/Segmentado'
+import { Aviso } from '../../components/ui/Aviso'
 import { SelectorTema } from '../../components/ui/SelectorTema'
 import { useSesion } from '../../contexts/sesion'
-import { CLIENTE_DEMO_ID, TIENDA_DEMO, clientePorId, nombreCompleto } from '../../data/mock'
-import type { RolCodigo } from '../../types/dominio'
 import styles from './Login.module.css'
-
-interface Perfil {
-  rol: RolCodigo
-  etiqueta: string
-  descripcion: string
-  /** A dónde entra cada rol después de iniciar sesión. */
-  ruta: string
-  nombreDemo: string
-  tienda?: string
-}
-
-const clienteDemo = clientePorId(CLIENTE_DEMO_ID)
-
-const PERFILES: Perfil[] = [
-  {
-    rol: 'ADMIN_SIS',
-    etiqueta: 'Sistema',
-    descripcion: 'Administrador del sistema: da de alta y de baja a las tiendas de la plataforma.',
-    ruta: '/admin-sistema/tiendas',
-    nombreDemo: 'Equipo TBF',
-  },
-  {
-    rol: 'ADMIN_NEG',
-    etiqueta: 'Negocio',
-    descripcion: 'Administrador del negocio: gestiona productos, clientes, compras y pagos de su tienda.',
-    ruta: '/admin-negocio',
-    nombreDemo: 'Rosa Quispe',
-    tienda: TIENDA_DEMO,
-  },
-  {
-    rol: 'CLIENTE',
-    etiqueta: 'Cliente',
-    descripcion: 'Cliente: consulta su estado de cuenta y sus próximos pagos.',
-    ruta: '/cliente/mi-cuenta',
-    nombreDemo: clienteDemo ? nombreCompleto(clienteDemo) : 'Cliente',
-    tienda: TIENDA_DEMO,
-  },
-]
 
 const VENTAJAS: { icono: NombreIcono; texto: string }[] = [
   { icono: 'personas', texto: 'Límite de crédito, día de corte y día de pago para cada cliente.' },
@@ -56,19 +17,17 @@ const VENTAJAS: { icono: NombreIcono; texto: string }[] = [
 ]
 
 export function Login() {
-  const [rol, setRol] = useState<RolCodigo>('ADMIN_NEG')
   const [usuario, setUsuario] = useState('')
   const [clave, setClave] = useState('')
-  const { iniciarSesion } = useSesion()
-  const navegar = useNavigate()
-
-  const perfil = PERFILES.find((candidato) => candidato.rol === rol) ?? PERFILES[0]
+  const { iniciarSesion, sesion, verificando, errorSesion } = useSesion()
+  const { ejecutar, ocupado, error } = useAccion()
 
   function alEnviar(evento: FormEvent) {
     evento.preventDefault()
-    iniciarSesion({ rol: perfil.rol, nombre: usuario.trim() || perfil.nombreDemo, tiendaNombre: perfil.tienda })
-    navegar(perfil.ruta)
+    void ejecutar(() => iniciarSesion(usuario.trim(), clave))
   }
+
+  if (sesion) return <Navigate to={NAV_POR_ROL[sesion.rol][0].ruta} replace />
 
   return (
     <div className={styles.escenario}>
@@ -109,19 +68,6 @@ export function Login() {
 
           <form className={styles.formulario} onSubmit={alEnviar}>
             <Campo
-              etiqueta="Perfil de acceso"
-              ayuda="En la versión final el sistema reconoce tu perfil al validar tu usuario; aquí lo eliges para poder mostrar las tres experiencias."
-            >
-              <Segmentado
-                etiquetaGrupo="Perfil de acceso"
-                opciones={PERFILES.map((opcion) => ({ valor: opcion.rol, etiqueta: opcion.etiqueta }))}
-                valor={rol}
-                onCambiar={setRol}
-                anchoCompleto
-              />
-            </Campo>
-
-            <Campo
               etiqueta="Usuario"
               ayuda="El usuario que te asignó el administrador de tu tienda (o del sistema, si eres administrador general)."
               htmlFor="usuario"
@@ -129,7 +75,7 @@ export function Login() {
               <input
                 id="usuario"
                 className="campo-entrada"
-                placeholder={perfil.nombreDemo}
+                required
                 value={usuario}
                 onChange={(evento) => setUsuario(evento.target.value)}
                 autoComplete="username"
@@ -145,15 +91,16 @@ export function Login() {
                 value={clave}
                 onChange={(evento) => setClave(evento.target.value)}
                 autoComplete="current-password"
+                required
               />
             </Campo>
 
-            <Boton type="submit" anchoCompleto className={styles.botonEntrar}>
-              Ingresar
+            {(error || errorSesion) && <Aviso tono="peligro">{error ?? errorSesion}</Aviso>}
+            <Boton type="submit" anchoCompleto className={styles.botonEntrar} disabled={ocupado || verificando}>
+              {ocupado || verificando ? 'Validando…' : 'Ingresar'}
             </Boton>
           </form>
 
-          <p className={styles.descripcionPerfil}>{perfil.descripcion}</p>
         </section>
       </div>
     </div>

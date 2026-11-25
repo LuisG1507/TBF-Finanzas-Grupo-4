@@ -7,10 +7,13 @@ import { Icono } from '../../components/ui/Icono'
 import { FilaDato, ListaDatos } from '../../components/ui/ListaDatos'
 import { Medidor } from '../../components/ui/Medidor'
 import { Tarjeta, TarjetaEncabezado } from '../../components/ui/Tarjeta'
-import { useDatos } from '../../contexts/datos'
-import { codigoUnidad, nombreCompleto, posicionDe } from '../../data/mock'
-import type { ModalidadCompra } from '../../types/dominio'
-import { formatearPorcentaje, formatearSoles, plural, sumarMontos } from '../../utils/formato'
+import { pedir } from '../../api/cliente'
+import { useAccion, useConsulta, useLista } from '../../api/consultas'
+import { TablaCronograma } from '../../components/negocio/TablaCronograma'
+import { EstadoConsulta } from '../../components/ui/EstadoConsulta'
+import { nombreCompleto } from '../../utils/texto'
+import type { Cliente, Compra, CreditoDisponible, ModalidadCompra, Producto } from '../../types/dominio'
+import { formatearFecha, formatearMonto, formatearPorcentaje, formatearSoles, plural, sumarMontos } from '../../utils/formato'
 import tabla from '../../components/ui/Tabla.module.css'
 import pagina from '../../styles/pagina.module.css'
 import styles from './NuevaCompra.module.css'
@@ -21,78 +24,79 @@ interface ItemCarrito {
 }
 
 /** Los productos que se venden por unidad no admiten fracciones; los que van por kilo o litro, sí. */
-function pasoDeCantidad(unidadId: number): number {
-  return codigoUnidad(unidadId) === 'UND' ? 1 : 0.1
+function pasoDeCantidad(codigo: string): number {
+  return codigo === 'UND' ? 1 : 0.001
 }
 
 export function NuevaCompra() {
-  // Clientes y productos salen de la lista compartida: los recién registrados aparecen aquí (y van primero).
-  const { clientes, productos } = useDatos()
-  const clientesActivos = clientes.filter((candidato) => candidato.activo)
-  const productosActivos = productos.filter((candidato) => candidato.activo)
-
-  const [clienteId, setClienteId] = useState(() => clientesActivos[0]?.id_cliente ?? 0)
+  const consultaClientes = useLista<Cliente>('/clientes?activo=true')
+  const consultaProductos = useLista<Producto>('/productos?activo=true')
+  const clientesActivos = (consultaClientes.datos ?? []).filter((cliente) => cliente.condicion !== null)
+  const productos = consultaProductos.datos ?? []
+  const [clienteId, setClienteId] = useState(0)
   const [carrito, setCarrito] = useState<ItemCarrito[]>([])
-  const [productoAAgregar, setProductoAAgregar] = useState(() => productosActivos[0]?.id_producto ?? 0)
+  const [productoAAgregar, setProductoAAgregar] = useState(0)
   const [cantidadAAgregar, setCantidadAAgregar] = useState('1')
   const [modalidadElegida, setModalidadElegida] = useState<ModalidadCompra>('FIN_DE_MES')
   const [numCuotas, setNumCuotas] = useState(2)
-  const [registrada, setRegistrada] = useState(false)
+  const [fechaCompra, setFechaCompra] = useState('')
+  const [simulacion, setSimulacion] = useState<{ clave: string; compra: Compra } | null>(null)
+  const [registrada, setRegistrada] = useState<Compra | null>(null)
+  const accion = useAccion()
 
-  if (clientesActivos.length === 0 || productosActivos.length === 0) {
+  const cliente = clientesActivos.find((candidato) => candidato.id_cliente === clienteId) ?? clientesActivos[0]
+  const condicion = cliente?.condicion
+  const productoElegido = productos.find((producto) => producto.id_producto === productoAAgregar) ?? productos[0]
+  const credito = useConsulta<CreditoDisponible>(cliente ? '/clientes/' + cliente.id_cliente + '/credito-disponible' : null)
+  if (!condicion || !productoElegido) {
     return (
       <Shell titulo="Nueva compra" subtitulo="Registra una venta a crédito, con uno o varios productos.">
-        <Aviso tono="info">
-          Para registrar una compra necesitas al menos un cliente activo y un producto activo. Regístralos primero en Clientes y en
-          Productos.
-        </Aviso>
+        <EstadoConsulta {...consultaClientes} />
+        <EstadoConsulta {...consultaProductos} />
+        {consultaClientes.datos && consultaProductos.datos && (
+          <Aviso tono="info">Para registrar una compra necesitas un cliente con crédito activo y un producto activo.</Aviso>
+        )}
       </Shell>
     )
   }
 
-  const cliente = clientesActivos.find((candidato) => candidato.id_cliente === clienteId) ?? clientesActivos[0]
-  const { condicion } = cliente
-  const productoElegido = productosActivos.find((producto) => producto.id_producto === productoAAgregar) ?? productosActivos[0]
-
   const lineas = carrito.flatMap((item) => {
     const producto = productos.find((candidato) => candidato.id_producto === item.productoId)
-    if (!producto) return []
-    // el subtotal se redondea a céntimos, como lo guardará el backend
-    const subtotal = Math.round(Number(producto.precio_lista) * item.cantidad * 100) / 100
-    return [{ producto, cantidad: item.cantidad, subtotal }]
+    return producto ? [{ producto, cantidad: item.cantidad }] : []
   })
-  const total = sumarMontos(lineas.map((linea) => linea.subtotal))
-
-  // La modalidad se aplica a toda la compra: todos los productos deben admitirla.
   const admiteFinDeMes = lineas.every((linea) => linea.producto.permite_fin_de_mes)
   const admiteCuotas = lineas.every((linea) => linea.producto.permite_cuotas)
-  const modalidad: ModalidadCompra | null =
-    modalidadElegida === 'FIN_DE_MES'
-      ? admiteFinDeMes
-        ? 'FIN_DE_MES'
-        : admiteCuotas
-          ? 'CUOTAS'
-          : null
-      : admiteCuotas
-        ? 'CUOTAS'
-        : admiteFinDeMes
-          ? 'FIN_DE_MES'
-          : null
-
-  // El límite se compara contra el saldo de capital pendiente (sin intereses).
-  const limite = Number(condicion.limite_credito)
-  // Un cliente recién registrado todavía no tiene compras: su saldo es cero.
-  const saldoPendiente = Number(posicionDe(cliente.id_cliente)?.saldo_capital ?? 0)
-  const disponible = sumarMontos([limite, -saldoPendiente])
-  const excedeLimite = total > disponible
-  const usoConEstaCompra = sumarMontos([saldoPendiente, total])
-  const cuotasValidas = modalidad !== 'CUOTAS' || (numCuotas >= 1 && numCuotas <= condicion.max_meses)
-  const cantidadValida = Number(cantidadAAgregar) > 0
+  const modalidades: ModalidadCompra[] = []
+  if (admiteFinDeMes) modalidades.push('FIN_DE_MES')
+  if (admiteCuotas) modalidades.push('CUOTAS')
+  const modalidad = modalidades.includes(modalidadElegida) ? modalidadElegida : (modalidades[0] ?? null)
+  const cuerpo = {
+    cliente_id: cliente.id_cliente,
+    modalidad,
+    num_cuotas: modalidad === 'CUOTAS' ? numCuotas : null,
+    items: carrito.map((item) => ({ producto_id: item.productoId, cantidad: String(item.cantidad) })),
+    fecha_hora_compra: fechaCompra || null,
+  }
+  const clave = JSON.stringify(cuerpo)
+  const previa = simulacion?.clave === clave ? simulacion.compra : null
+  const moneda = previa?.moneda.codigo_iso ?? condicion.moneda.codigo_iso
+  const creditoActual = previa?.credito ?? credito.datos
+  const limite = Number(creditoActual?.limite_credito ?? condicion.limite_credito)
+  const saldoPendiente = creditoActual?.capital_pendiente
+  const disponible = creditoActual?.credito_disponible
+  const total = previa?.monto_total
+  const excedeLimite = Boolean(previa?.credito?.excede_limite)
+  const usoConEstaCompra = sumarMontos([saldoPendiente ?? 0, total ?? 0])
+  const cuotasValidas = modalidad !== 'CUOTAS' || (Number.isInteger(numCuotas) && numCuotas >= 1 && numCuotas <= condicion.max_meses)
+  const cantidad = Number(cantidadAAgregar)
+  const paso = pasoDeCantidad(productoElegido.unidad.codigo)
+  const cantidadValida = cantidad > 0 && Math.abs(cantidad / paso - Math.round(cantidad / paso)) < 0.000001
 
   function agregarProducto() {
-    const cantidad = Number(cantidadAAgregar)
-    if (!(cantidad > 0)) return
-    setRegistrada(false)
+    if (!cantidadValida) return
+    setRegistrada(null)
+    setSimulacion(null)
+    accion.limpiarError()
     const productoId = productoElegido.id_producto
     setCarrito((actual) =>
       actual.some((item) => item.productoId === productoId)
@@ -104,16 +108,34 @@ export function NuevaCompra() {
   }
 
   function quitarProducto(productoId: number) {
+    setSimulacion(null)
     setCarrito((actual) => actual.filter((item) => item.productoId !== productoId))
   }
 
+  function simularCompra() {
+    void accion.ejecutar(async () => {
+      setSimulacion(null)
+      const compra = await pedir<Compra>('/compras/simular', { method: 'POST', cuerpo })
+      setSimulacion({ clave, compra })
+    })
+  }
+
   function registrarCompra() {
-    setRegistrada(true)
-    setCarrito([])
+    if (!previa || excedeLimite) return
+    void accion.ejecutar(async () => {
+      const compra = await pedir<Compra>('/compras', {
+        method: 'POST', cuerpo: { ...cuerpo, fecha_hora_compra: previa.fecha_hora_compra },
+      })
+      setRegistrada(compra)
+      setSimulacion(null)
+      setCarrito([])
+      credito.recargar()
+    })
   }
 
   return (
     <Shell titulo="Nueva compra" subtitulo="Registra una venta a crédito, con uno o varios productos.">
+      <EstadoConsulta error={accion.error} />
       <div className={pagina.dosColumnas}>
         <div className={pagina.columna}>
           <Tarjeta>
@@ -123,10 +145,13 @@ export function NuevaCompra() {
                 id="cliente"
                 className="campo-entrada"
                 value={cliente.id_cliente}
+                disabled={accion.ocupado}
                 onChange={(evento) => {
                   setClienteId(Number(evento.target.value))
                   setCarrito([])
-                  setRegistrada(false)
+                  setRegistrada(null)
+                  setSimulacion(null)
+                  accion.limpiarError()
                 }}
               >
                 {clientesActivos.map((opcion) => (
@@ -135,6 +160,10 @@ export function NuevaCompra() {
                   </option>
                 ))}
               </select>
+            </Campo>
+            <Campo etiqueta="Fecha y hora de compra" ayuda="Hora de Lima. Si la dejas vacía se usa el momento de la simulación." htmlFor="fecha-compra">
+              <input id="fecha-compra" type="datetime-local" className="campo-entrada" value={fechaCompra} disabled={accion.ocupado}
+                onChange={(evento) => { setFechaCompra(evento.target.value); setSimulacion(null) }} />
             </Campo>
             <ul className={styles.condiciones}>
               <li>
@@ -157,28 +186,30 @@ export function NuevaCompra() {
                   id="producto"
                   className="campo-entrada"
                   value={productoElegido.id_producto}
+                  disabled={accion.ocupado}
                   onChange={(evento) => setProductoAAgregar(Number(evento.target.value))}
                 >
-                  {productosActivos.map((producto) => (
+                  {productos.map((producto) => (
                     <option key={producto.id_producto} value={producto.id_producto}>
                       {producto.nombre} — {formatearSoles(producto.precio_lista)}
                     </option>
                   ))}
                 </select>
               </Campo>
-              <Campo etiqueta={`Cantidad (${codigoUnidad(productoElegido.unidad_id)})`} ayuda="Mayor que cero." htmlFor="cantidad">
+              <Campo etiqueta={`Cantidad (${productoElegido.unidad.codigo})`} ayuda="Mayor que cero." htmlFor="cantidad">
                 <input
                   id="cantidad"
                   type="number"
-                  min={pasoDeCantidad(productoElegido.unidad_id)}
-                  step={pasoDeCantidad(productoElegido.unidad_id)}
+                  min={paso}
+                  step={paso}
                   inputMode="decimal"
                   className="campo-entrada"
                   value={cantidadAAgregar}
+                  disabled={accion.ocupado}
                   onChange={(evento) => setCantidadAAgregar(evento.target.value)}
                 />
               </Campo>
-              <Boton variante="secundario" icono="mas" className={styles.botonAgregar} onClick={agregarProducto} disabled={!cantidadValida}>
+              <Boton variante="secundario" icono="mas" className={styles.botonAgregar} onClick={agregarProducto} disabled={!cantidadValida || accion.ocupado}>
                 Agregar
               </Boton>
             </div>
@@ -187,26 +218,30 @@ export function NuevaCompra() {
               <p className={tabla.vacio}>Todavía no agregaste ningún producto.</p>
             ) : (
               <ul className={styles.carrito}>
-                {lineas.map((linea) => (
-                  <li key={linea.producto.id_producto} className={styles.linea}>
-                    <div className={styles.lineaTexto}>
-                      <p className={styles.lineaNombre}>{linea.producto.nombre}</p>
-                      <p className={styles.lineaDetalle}>
-                        {linea.cantidad} {codigoUnidad(linea.producto.unidad_id)} × {formatearSoles(linea.producto.precio_lista)}
-                      </p>
-                    </div>
-                    <span className={styles.lineaSubtotal}>{formatearSoles(linea.subtotal)}</span>
-                    <button
-                      type="button"
-                      className={styles.quitar}
-                      onClick={() => quitarProducto(linea.producto.id_producto)}
-                      aria-label={`Quitar ${linea.producto.nombre}`}
-                      title="Quitar"
-                    >
-                      <Icono nombre="cerrar" tamano={15} grosor={2} />
-                    </button>
-                  </li>
-                ))}
+                {lineas.map((linea) => {
+                  const item = previa?.items.find((fila) => fila.producto_id === linea.producto.id_producto)
+                  return (
+                    <li key={linea.producto.id_producto} className={styles.linea}>
+                      <div className={styles.lineaTexto}>
+                        <p className={styles.lineaNombre}>{linea.producto.nombre}</p>
+                        <p className={styles.lineaDetalle}>
+                          {linea.cantidad} {linea.producto.unidad.codigo} · {item ? formatearMonto(item.precio_unitario, moneda) : formatearSoles(linea.producto.precio_lista)}
+                        </p>
+                      </div>
+                      <span className={styles.lineaSubtotal}>{item ? formatearMonto(item.subtotal, moneda) : '—'}</span>
+                      <button
+                        type="button"
+                        className={styles.quitar}
+                        disabled={accion.ocupado}
+                        onClick={() => quitarProducto(linea.producto.id_producto)}
+                        aria-label={`Quitar ${linea.producto.nombre}`}
+                        title="Quitar"
+                      >
+                        <Icono nombre="cerrar" tamano={15} grosor={2} />
+                      </button>
+                    </li>
+                  )
+                })}
               </ul>
             )}
           </Tarjeta>
@@ -223,8 +258,8 @@ export function NuevaCompra() {
                     type="radio"
                     name="modalidad"
                     checked={modalidad === 'FIN_DE_MES'}
-                    disabled={!admiteFinDeMes}
-                    onChange={() => setModalidadElegida('FIN_DE_MES')}
+                    disabled={!admiteFinDeMes || accion.ocupado}
+                    onChange={() => { setModalidadElegida('FIN_DE_MES'); setSimulacion(null) }}
                   />
                   <span>
                     <span className={styles.modalidadTitulo}>Un solo pago a fin de mes</span>
@@ -236,8 +271,8 @@ export function NuevaCompra() {
                     type="radio"
                     name="modalidad"
                     checked={modalidad === 'CUOTAS'}
-                    disabled={!admiteCuotas}
-                    onChange={() => setModalidadElegida('CUOTAS')}
+                    disabled={!admiteCuotas || accion.ocupado}
+                    onChange={() => { setModalidadElegida('CUOTAS'); setSimulacion(null) }}
                   />
                   <span>
                     <span className={styles.modalidadTitulo}>En cuotas mensuales</span>
@@ -269,7 +304,8 @@ export function NuevaCompra() {
                       inputMode="numeric"
                       className="campo-entrada"
                       value={numCuotas}
-                      onChange={(evento) => setNumCuotas(Number(evento.target.value))}
+                      disabled={accion.ocupado}
+                      onChange={(evento) => { setNumCuotas(Number(evento.target.value)); setSimulacion(null) }}
                     />
                   </Campo>
                 </div>
@@ -280,50 +316,63 @@ export function NuevaCompra() {
 
         <Tarjeta className={pagina.pegajosa}>
           <TarjetaEncabezado titulo="Resumen del crédito" descripcion={nombreCompleto(cliente)} />
+          <EstadoConsulta {...credito} />
           <ListaDatos>
-            <FilaDato etiqueta="Límite de crédito" valor={formatearSoles(limite)} />
-            <FilaDato etiqueta="Saldo pendiente" valor={formatearSoles(saldoPendiente)} />
-            <FilaDato etiqueta="Disponible" valor={formatearSoles(disponible)} />
-            <FilaDato etiqueta="Total de esta compra" valor={formatearSoles(total)} enfasis separada />
+            <FilaDato etiqueta="Límite de crédito" valor={formatearMonto(limite, moneda)} />
+            <FilaDato etiqueta="Saldo pendiente" valor={saldoPendiente ? formatearMonto(saldoPendiente, moneda) : '—'} />
+            <FilaDato etiqueta="Disponible" valor={disponible ? formatearMonto(disponible, moneda) : '—'} />
+            <FilaDato etiqueta="Total de esta compra" valor={total ? formatearMonto(total, moneda) : '—'} enfasis separada />
           </ListaDatos>
 
-          <div className={styles.uso}>
+          {creditoActual && <div className={styles.uso}>
             <Medidor
               etiqueta="Uso del límite de crédito con esta compra"
               valor={usoConEstaCompra}
               maximo={limite}
-              textoValor={`${formatearSoles(usoConEstaCompra)} de ${formatearSoles(limite)}`}
+              textoValor={`${formatearMonto(usoConEstaCompra, moneda)} de ${formatearMonto(limite, moneda)}`}
               tono={excedeLimite ? 'peligro' : 'acento'}
             />
             <p className={pagina.nota}>
-              Con esta compra usaría {formatearPorcentaje(limite > 0 ? usoConEstaCompra / limite : 0)} de su límite.
+              {previa ? 'Con esta compra usaría ' : 'Actualmente usa '}{formatearPorcentaje(limite > 0 ? usoConEstaCompra / limite : 0)} de su límite.
             </p>
-          </div>
+          </div>}
 
           <div className={pagina.pila}>
             {excedeLimite && (
               <Aviso tono="peligro">
-                Esta compra supera el crédito disponible del cliente por {formatearSoles(sumarMontos([total, -disponible]))}. No se puede
-                registrar por encima de su límite.
+                Esta compra supera el crédito disponible del cliente.
               </Aviso>
             )}
 
-            {registrada && (
-              <Aviso tono="exito" titulo="Compra registrada (demostración)">
-                Cuando esta pantalla se conecte al backend, aquí se generará el cronograma de pagos.
-              </Aviso>
-            )}
-
-            <Boton
-              anchoCompleto
-              disabled={lineas.length === 0 || excedeLimite || modalidad === null || !cuotasValidas}
-              onClick={registrarCompra}
-            >
-              Registrar compra
+            {registrada && <Aviso tono="exito" titulo="Compra registrada">Compra n.° {registrada.id_compra}.</Aviso>}
+            <Boton anchoCompleto variante={previa ? 'secundario' : 'primario'}
+              disabled={lineas.length === 0 || modalidad === null || !cuotasValidas || accion.ocupado} onClick={simularCompra}>
+              {accion.ocupado && !previa ? 'Simulando…' : previa ? 'Volver a simular' : 'Simular compra'}
             </Boton>
+            {previa && <Boton anchoCompleto disabled={excedeLimite || accion.ocupado} onClick={registrarCompra}>
+              {accion.ocupado ? 'Guardando…' : 'Registrar compra'}
+            </Boton>}
           </div>
         </Tarjeta>
       </div>
+      {previa ? <ResultadoCompra compra={previa} /> : registrada && <ResultadoCompra compra={registrada} />}
     </Shell>
+  )
+}
+
+function ResultadoCompra({ compra }: { compra: Compra }) {
+  const moneda = compra.moneda.codigo_iso
+  return (
+    <Tarjeta>
+      <TarjetaEncabezado titulo={compra.cronograma.length ? 'Cronograma de pagos' : 'Pago a fin de mes'} />
+      <ListaDatos>
+        <FilaDato etiqueta="Fecha de corte" valor={formatearFecha(compra.fecha_corte)} />
+        <FilaDato etiqueta="Primer vencimiento" valor={formatearFecha(compra.fecha_primer_pago)} />
+        <FilaDato etiqueta="Días de gracia" valor={String(compra.dias_gracia)} />
+        <FilaDato etiqueta="Interés total" valor={formatearMonto(compra.total_intereses, moneda)} />
+        <FilaDato etiqueta="Total a pagar" valor={formatearMonto(compra.total_a_pagar, moneda)} enfasis />
+      </ListaDatos>
+      {compra.cronograma.length > 0 && <TablaCronograma cuotas={compra.cronograma} moneda={moneda} />}
+    </Tarjeta>
   )
 }

@@ -6,9 +6,10 @@ import { Campo } from '../../components/ui/Campo'
 import { Insignia } from '../../components/ui/Insignia'
 import { Modal } from '../../components/ui/Modal'
 import { Tarjeta } from '../../components/ui/Tarjeta'
-import { siguienteId, useDatos } from '../../contexts/datos'
-import { codigoUnidad, marcasDemo, nombreMarca, proveedoresDemo, unidadesDemo } from '../../data/mock'
-import type { Producto } from '../../types/dominio'
+import { pedir } from '../../api/cliente'
+import { useAccion, useConsulta, useLista } from '../../api/consultas'
+import { EstadoConsulta } from '../../components/ui/EstadoConsulta'
+import type { Marca, Producto, Proveedor, UnidadMedida } from '../../types/dominio'
 import { formatearSoles, plural } from '../../utils/formato'
 import { coincide } from '../../utils/texto'
 import tabla from '../../components/ui/Tabla.module.css'
@@ -16,36 +17,67 @@ import formulario from '../../styles/formulario.module.css'
 import pagina from '../../styles/pagina.module.css'
 
 export function Productos() {
-  // La lista es compartida: un producto nuevo aparece también al registrar una compra.
-  const { productos, agregarProducto } = useDatos()
+  const carga = useLista<Producto>('/productos')
+  const cargaMarcas = useConsulta<Marca[]>('/marcas?activo=true')
+  const cargaProveedores = useConsulta<Proveedor[]>('/proveedores?activo=true')
+  const cargaUnidades = useConsulta<UnidadMedida[]>('/unidades-medida')
+  const productos = carga.datos ?? []
+  const accion = useAccion()
+  const [catalogo, setCatalogo] = useState<'marca' | 'proveedor' | null>(null)
+  const cerrarCatalogo = useCallback(() => setCatalogo(null), [])
   const [modalAbierto, setModalAbierto] = useState(false)
   const [consulta, setConsulta] = useState('')
   const cerrarModal = useCallback(() => setModalAbierto(false), [])
 
   const activos = productos.filter((producto) => producto.activo).length
   const visibles = productos.filter((producto) =>
-    coincide(consulta, producto.nombre, producto.codigo, nombreMarca(producto.marca_id)),
+    coincide(consulta, producto.nombre, producto.codigo, producto.marca?.nombre),
   )
 
   function alCrearProducto(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault()
     const datos = new FormData(evento.currentTarget)
-    const nuevo: Producto = {
-      id_producto: siguienteId(productos.map((producto) => producto.id_producto)),
-      codigo: String(datos.get('codigo')),
-      nombre: String(datos.get('nombre')),
-      descripcion: String(datos.get('descripcion') || '') || undefined,
-      proveedor_id: datos.get('proveedor_id') ? Number(datos.get('proveedor_id')) : undefined,
-      marca_id: datos.get('marca_id') ? Number(datos.get('marca_id')) : undefined,
-      unidad_id: Number(datos.get('unidad_id')),
-      precio_contado: Number(datos.get('precio_contado')).toFixed(2),
-      precio_lista: Number(datos.get('precio_lista')).toFixed(2),
-      permite_fin_de_mes: datos.get('permite_fin_de_mes') === 'on',
-      permite_cuotas: datos.get('permite_cuotas') === 'on',
-      activo: true,
-    }
-    agregarProducto(nuevo)
-    setModalAbierto(false)
+    void accion.ejecutar(async () => {
+      await pedir('/productos', {
+        method: 'POST',
+        cuerpo: {
+          codigo: datos.get('codigo'),
+          nombre: datos.get('nombre'),
+          descripcion: datos.get('descripcion') || null,
+          imagen_url: datos.get('imagen_url') || null,
+          proveedor_id: datos.get('proveedor_id') ? Number(datos.get('proveedor_id')) : null,
+          marca_id: datos.get('marca_id') ? Number(datos.get('marca_id')) : null,
+          unidad_id: Number(datos.get('unidad_id')),
+          precio_contado: datos.get('precio_contado'),
+          precio_lista: datos.get('precio_lista'),
+          permite_fin_de_mes: datos.has('permite_fin_de_mes'),
+          permite_cuotas: datos.has('permite_cuotas'),
+        },
+      })
+      carga.recargar()
+      setModalAbierto(false)
+    })
+  }
+
+  function alternarProducto(producto: Producto) {
+    void accion.ejecutar(async () => {
+      await pedir('/productos/' + producto.id_producto + '/' + (producto.activo ? 'baja' : 'alta'), { method: 'POST' })
+      carga.recargar()
+    })
+  }
+
+  function crearCatalogo(evento: FormEvent<HTMLFormElement>) {
+    evento.preventDefault()
+    const nombre = new FormData(evento.currentTarget).get('nombre')
+    const esMarca = catalogo === 'marca'
+    void accion.ejecutar(async () => {
+      await pedir(esMarca ? '/marcas' : '/proveedores', {
+        method: 'POST', cuerpo: esMarca ? { nombre } : { razon_social: nombre },
+      })
+      if (esMarca) cargaMarcas.recargar()
+      else cargaProveedores.recargar()
+      cerrarCatalogo()
+    })
   }
 
   return (
@@ -53,11 +85,15 @@ export function Productos() {
       titulo="Productos"
       subtitulo="Lo que tu tienda ofrece a crédito, con su precio al contado y su precio de lista."
       acciones={
-        <Boton icono="mas" onClick={() => setModalAbierto(true)}>
-          Nuevo producto
-        </Boton>
+        <>
+          <Boton variante="secundario" onClick={() => { accion.limpiarError(); setCatalogo('marca') }}>Nueva marca</Boton>
+          <Boton variante="secundario" onClick={() => { accion.limpiarError(); setCatalogo('proveedor') }}>Nuevo proveedor</Boton>
+          <Boton icono="mas" onClick={() => { accion.limpiarError(); setModalAbierto(true) }}>Nuevo producto</Boton>
+        </>
       }
     >
+      <EstadoConsulta {...carga} />
+      {!modalAbierto && !catalogo && <EstadoConsulta error={accion.error} />}
       <Tarjeta relleno="ninguno">
         <div className={pagina.barraTabla}>
           <p className={pagina.barraTablaTexto}>
@@ -87,7 +123,7 @@ export function Productos() {
             </thead>
             <tbody>
               {visibles.map((producto) => {
-                const marca = nombreMarca(producto.marca_id)
+                const marca = producto.marca?.nombre
                 return (
                   <tr key={producto.id_producto}>
                     <td>
@@ -97,7 +133,7 @@ export function Productos() {
                         {marca ? ` · ${marca}` : ''}
                       </div>
                     </td>
-                    <td>{codigoUnidad(producto.unidad_id)}</td>
+                    <td>{producto.unidad.codigo}</td>
                     <td className={tabla.numerica}>{formatearSoles(producto.precio_contado)}</td>
                     <td className={[tabla.numerica, tabla.fuerte].join(' ')}>{formatearSoles(producto.precio_lista)}</td>
                     <td>
@@ -108,6 +144,9 @@ export function Productos() {
                     </td>
                     <td>
                       <Insignia texto={producto.activo ? 'Activo' : 'Dado de baja'} tono={producto.activo ? 'exito' : 'neutro'} />
+                      <Boton variante="fantasma" tamano="pequeno" disabled={accion.ocupado} onClick={() => alternarProducto(producto)}>
+                        {producto.activo ? 'Dar de baja' : 'Reactivar'}
+                      </Boton>
                     </td>
                   </tr>
                 )
@@ -115,12 +154,28 @@ export function Productos() {
             </tbody>
           </table>
         </div>
-        {visibles.length === 0 && <p className={tabla.vacio}>Ningún producto coincide con «{consulta}».</p>}
+        {carga.datos && visibles.length === 0 && <p className={tabla.vacio}>Ningún producto coincide con «{consulta}».</p>}
       </Tarjeta>
+
+      {catalogo && (
+        <Modal titulo={catalogo === 'marca' ? 'Nueva marca' : 'Nuevo proveedor'} onCerrar={cerrarCatalogo}>
+          <form className={formulario.formulario} onSubmit={crearCatalogo}>
+            <EstadoConsulta error={accion.error} />
+            <Campo etiqueta={catalogo === 'marca' ? 'Nombre de la marca' : 'Razón social'} obligatorio htmlFor="catalogo-nombre">
+              <input id="catalogo-nombre" name="nombre" className="campo-entrada" required maxLength={catalogo === 'marca' ? 100 : 200} />
+            </Campo>
+            <div className={formulario.acciones}><Boton type="submit" disabled={accion.ocupado}>Guardar</Boton></div>
+          </form>
+        </Modal>
+      )}
 
       {modalAbierto && (
         <Modal titulo="Nuevo producto" descripcion="Aparecerá de inmediato al registrar una compra." onCerrar={cerrarModal} ancho={660}>
           <form className={formulario.formulario} onSubmit={alCrearProducto}>
+            <EstadoConsulta error={accion.error} />
+            <EstadoConsulta {...cargaMarcas} />
+            <EstadoConsulta {...cargaProveedores} />
+            <EstadoConsulta {...cargaUnidades} />
             <div className={formulario.seccion}>
               <div className={formulario.rejilla3}>
                 <Campo etiqueta="Código" ayuda="Código interno para ubicarlo rápido, por ejemplo P-007." obligatorio htmlFor="codigo">
@@ -136,12 +191,15 @@ export function Productos() {
               <Campo etiqueta="Descripción" ayuda="Opcional. Detalles que ayuden a diferenciarlo de otros similares." htmlFor="descripcion">
                 <textarea id="descripcion" name="descripcion" className="campo-entrada" rows={2} />
               </Campo>
+              <Campo etiqueta="URL de la imagen" htmlFor="imagen_url">
+                <input id="imagen_url" name="imagen_url" type="url" className="campo-entrada" />
+              </Campo>
 
               <div className={formulario.rejilla3}>
                 <Campo etiqueta="Proveedor" ayuda="Opcional, si lo compras a un proveedor fijo." htmlFor="proveedor_id">
                   <select id="proveedor_id" name="proveedor_id" className="campo-entrada" defaultValue="">
                     <option value="">Sin proveedor</option>
-                    {proveedoresDemo.map((proveedor) => (
+                    {(cargaProveedores.datos ?? []).map((proveedor) => (
                       <option key={proveedor.id_proveedor} value={proveedor.id_proveedor}>
                         {proveedor.razon_social}
                       </option>
@@ -151,7 +209,7 @@ export function Productos() {
                 <Campo etiqueta="Marca" ayuda="Opcional; no aplica a servicios." htmlFor="marca_id">
                   <select id="marca_id" name="marca_id" className="campo-entrada" defaultValue="">
                     <option value="">Sin marca</option>
-                    {marcasDemo.map((marca) => (
+                    {(cargaMarcas.datos ?? []).map((marca) => (
                       <option key={marca.id_marca} value={marca.id_marca}>
                         {marca.nombre}
                       </option>
@@ -163,7 +221,7 @@ export function Productos() {
                     <option value="" disabled>
                       Selecciona
                     </option>
-                    {unidadesDemo.map((unidad) => (
+                    {(cargaUnidades.datos ?? []).map((unidad) => (
                       <option key={unidad.id_unidad} value={unidad.id_unidad}>
                         {unidad.nombre}
                       </option>
@@ -230,7 +288,7 @@ export function Productos() {
               <Boton variante="secundario" onClick={cerrarModal}>
                 Cancelar
               </Boton>
-              <Boton type="submit">Guardar producto</Boton>
+              <Boton type="submit" disabled={accion.ocupado || !cargaUnidades.datos}>{accion.ocupado ? 'Guardando…' : 'Guardar producto'}</Boton>
             </div>
           </form>
         </Modal>

@@ -1,7 +1,6 @@
 import type { ReactNode } from 'react'
 import { Navigate, Route, BrowserRouter as Router, Routes } from 'react-router-dom'
 import { RutaProtegida } from './components/RutaProtegida'
-import { DatosProvider } from './contexts/DatosContext'
 import { SesionProvider } from './contexts/SesionContext'
 import { TemaProvider } from './contexts/TemaContext'
 import { Clientes } from './pages/AdminNegocio/Clientes'
@@ -25,10 +24,8 @@ export default function App() {
   return (
     <TemaProvider>
       <SesionProvider>
-        {/* Los datos viven por encima de las rutas: así no se pierden al cambiar de pantalla */}
-        <DatosProvider>
-          <Router>
-            <Routes>
+        <Router>
+          <Routes>
               <Route path="/login" element={<Login />} />
 
               {/* Administrador del sistema */}
@@ -49,9 +46,8 @@ export default function App() {
               <Route path="/dev/calculadora" element={<CalculadoraTasas />} />
 
               <Route path="*" element={<Navigate to="/login" replace />} />
-            </Routes>
-          </Router>
-        </DatosProvider>
+          </Routes>
+        </Router>
       </SesionProvider>
     </TemaProvider>
   )

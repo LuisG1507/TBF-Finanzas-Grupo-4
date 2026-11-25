@@ -9,7 +9,9 @@ export interface Sesion {
 
 export interface SesionContextValor {
   sesion: Sesion | null
-  iniciarSesion: (sesion: Sesion) => void
+  verificando: boolean
+  errorSesion: string | undefined
+  iniciarSesion: (usuario: string, clave: string) => Promise<void>
   cerrarSesion: () => void
 }
 

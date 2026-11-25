@@ -29,4 +29,4 @@ export const NOMBRE_ROL: Record<RolCodigo, string> = {
   CLIENTE: 'Cliente',
 }
 
-export const NOMBRE_APLICACION = 'Créditos de barrio'
+export const NOMBRE_APLICACION = 'Bizon'
