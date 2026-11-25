@@ -6,6 +6,7 @@ Cómo se calcula una compra
    es en dólares, cada precio unitario se convierte (soles ÷ tipo de cambio) y se redondea a 2 decimales; ese precio
    queda CONGELADO en el detalle. Subtotal = precio unitario × cantidad (2 decimales); total = suma de subtotales.
 2. La condición de crédito que rige es la vigente EN LA FECHA de la compra, y la compra queda ligada a ella.
+   Si la moneda de ese pacto ya cambió, no se admite registrar una compra retroactiva en la moneda anterior.
 3. Ciclo (ver ciclo_credito.py): fecha de corte, fecha de pago del ciclo y días de gracia (30/360).
 4. CUOTAS: método francés con la gracia capitalizada (C' = C·(1+TEP)^(días/30)); la primera cuota vence un mes después
    de la fecha de pago del ciclo. FIN_DE_MES: un solo pago en la fecha de pago del ciclo, por el capital capitalizado
@@ -29,7 +30,7 @@ from app.models.catalogo import Producto
 from app.models.cliente import Cliente, CondicionCredito
 from app.models.compra import Compra, Cuota, DetalleCompra
 from app.models.enumeraciones import AccionBitacora, EntidadBitacora, EstadoCompra, EstadoCuota, ModalidadCompra
-from app.models.estado_cuenta import EstadoCuentaDetalle
+from app.models.estado_cuenta import EstadoCuenta, EstadoCuentaDetalle
 from app.models.pago import Pago
 from app.schemas.schemas_auth import UsuarioActual
 from app.schemas.schemas_clientes import MonedaResumen
@@ -247,8 +248,18 @@ def _fecha_hora_local(pedida: datetime | None) -> datetime:
     return local
 
 
-def _calcular(db: Session, tienda_id: int, datos: CompraCrear) -> _Borrador:
-    cliente = servicio_clientes.cliente_de_tienda(db, tienda_id, datos.cliente_id)
+def _validar_cortes_abiertos(db: Session, cliente_id: int, corte: date, cuotas: int) -> None:
+    cortes = [ciclo_credito.sumar_meses(corte, mes) for mes in range(cuotas + 1)]
+    corte_emitido = db.scalar(
+        select(EstadoCuenta.fecha_corte).where(EstadoCuenta.cliente_id == cliente_id, EstadoCuenta.fecha_corte.in_(cortes))
+        .order_by(EstadoCuenta.fecha_corte).limit(1)
+    )
+    if corte_emitido is not None:
+        raise _conflicto(f"El corte del {corte_emitido.isoformat()} ya tiene un estado de cuenta emitido.")
+
+
+def _calcular(db: Session, tienda_id: int, datos: CompraCrear, *, bloquear_cliente: bool = False) -> _Borrador:
+    cliente = servicio_clientes.cliente_de_tienda(db, tienda_id, datos.cliente_id, bloquear=bloquear_cliente)
     if not cliente.activo:
         raise _conflicto("El cliente está dado de baja: no se le pueden registrar compras.")
 
@@ -256,6 +267,9 @@ def _calcular(db: Session, tienda_id: int, datos: CompraCrear) -> _Borrador:
     condicion = servicio_clientes.condicion_en_fecha(cliente, fecha_hora.date())
     if condicion is None:
         raise _invalido(f"El cliente no tenía una condición de crédito vigente el {fecha_hora.date().isoformat()}.")
+    vigente = servicio_clientes.condicion_vigente(cliente)
+    if vigente is not None and condicion.moneda_id != vigente.moneda_id:
+        raise _conflicto(f"La compra corresponde a la moneda anterior ({condicion.moneda.codigo_iso}) del crédito del cliente.")
     moneda = condicion.moneda.codigo_iso
 
     # --- productos
@@ -289,6 +303,7 @@ def _calcular(db: Session, tienda_id: int, datos: CompraCrear) -> _Borrador:
 
     # --- ciclo: corte, pago y gracia
     fecha_corte = ciclo_credito.fecha_corte_asignada(fecha_hora.replace(tzinfo=None), condicion.dia_corte, condicion.hora_corte)
+    _validar_cortes_abiertos(db, cliente.id_cliente, fecha_corte, num_cuotas if datos.modalidad == ModalidadCompra.CUOTAS else 0)
     fecha_pago_ciclo = ciclo_credito.fecha_pago_del_ciclo(fecha_corte, condicion.dia_pago)
     dias_gracia = ciclo_credito.dias_30_360(fecha_hora.date(), fecha_pago_ciclo)
 
@@ -325,7 +340,7 @@ def simular(db: Session, tienda_id: int, datos: CompraCrear) -> CompraRespuesta:
 
 
 def registrar(db: Session, tienda_id: int, datos: CompraCrear, actor: UsuarioActual) -> CompraRespuesta:
-    b = _calcular(db, tienda_id, datos)
+    b = _calcular(db, tienda_id, datos, bloquear_cliente=True)
     simbolo = b.condicion.moneda.simbolo
     if b.excede_limite:
         raise _conflicto(
@@ -402,6 +417,11 @@ def listar(
 
 
 def anular(db: Session, tienda_id: int, id_compra: int, motivo: str, actor: UsuarioActual) -> CompraRespuesta:
+    # La emisión y la anulación se excluyen sobre el mismo cliente.
+    db.scalar(
+        select(Cliente.id_cliente).join(Cliente.compras)
+        .where(Compra.id_compra == id_compra, Cliente.tienda_id == tienda_id).with_for_update(of=Cliente)
+    )
     compra = _compra_de_tienda(db, tienda_id, id_compra)
     if compra.estado != EstadoCompra.VIGENTE:
         raise _conflicto(f"La compra ya está {compra.estado.value.lower()}.")

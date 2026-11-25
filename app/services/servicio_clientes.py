@@ -111,8 +111,11 @@ def _consulta_clientes(tienda_id: int):
     )
 
 
-def _cliente_de_tienda(db: Session, tienda_id: int, id_cliente: int) -> Cliente:
-    cliente = db.scalar(_consulta_clientes(tienda_id).where(Cliente.id_cliente == id_cliente))
+def _cliente_de_tienda(db: Session, tienda_id: int, id_cliente: int, *, bloquear: bool = False) -> Cliente:
+    consulta = _consulta_clientes(tienda_id).where(Cliente.id_cliente == id_cliente)
+    if bloquear:
+        consulta = consulta.with_for_update()
+    cliente = db.scalar(consulta)
     if cliente is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "El cliente no existe.")
     return cliente
@@ -281,7 +284,9 @@ def actualizar(db: Session, tienda_id: int, id_cliente: int, datos: ClienteActua
 
 
 def cambiar_condicion(db: Session, tienda_id: int, id_cliente: int, datos: CondicionCrear, actor: UsuarioActual) -> ClienteRespuesta:
-    cliente = _cliente_de_tienda(db, tienda_id, id_cliente)
+    from app.services.servicio_compras import capital_pendiente
+
+    cliente = _cliente_de_tienda(db, tienda_id, id_cliente, bloquear=True)
     if not cliente.activo:
         raise _conflicto("El cliente está dado de baja: reactívalo antes de cambiar sus condiciones.")
 
@@ -296,6 +301,13 @@ def cambiar_condicion(db: Session, tienda_id: int, id_cliente: int, datos: Condi
         raise _invalido("La nueva condición no puede empezar antes que la que está vigente.")
 
     if anterior is not None:
+        if anterior.moneda_id != moneda.id_moneda:
+            pendiente = capital_pendiente(db, id_cliente, anterior.moneda.codigo_iso)
+            if pendiente > 0:
+                raise _conflicto(
+                    f"No se puede cambiar la moneda del crédito mientras haya capital pendiente "
+                    f"({anterior.moneda.simbolo} {pendiente})."
+                )
         anterior.vigente_hasta = desde - timedelta(days=1)  # la anterior deja de regir el día antes de la nueva
     db.add(nueva)
     db.flush()
