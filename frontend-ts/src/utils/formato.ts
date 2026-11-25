@@ -1,4 +1,5 @@
 const LOCAL = 'es-PE'
+const ZONA_LIMA = 'America/Lima'
 
 /*
   Las fechas del backend llegan como texto ISO. Una fecha sola ("2026-11-26") no lleva hora, y
@@ -16,9 +17,15 @@ function sinPuntoDeAbreviatura(texto: string): string {
   return texto.replace(/\./g, '')
 }
 
-export function formatearSoles(valor: string | number): string {
+export function formatearMonto(valor: string | number, moneda: 'PEN' | 'USD' = 'PEN'): string {
   const numero = typeof valor === 'string' ? Number(valor) : valor
-  return `S/ ${numero.toLocaleString(LOCAL, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+  return `${moneda === 'USD' ? 'US$' : 'S/'} ${numero.toLocaleString(LOCAL, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+}
+
+export const formatearSoles = (valor: string | number) => formatearMonto(valor)
+
+export function hoyLima(): string {
+  return new Date().toLocaleDateString('sv-SE', { timeZone: ZONA_LIMA })
 }
 
 /** Soles sin céntimos, para los ejes de los gráficos: "S/ 800". */
@@ -28,7 +35,9 @@ export function formatearSolesEntero(valor: number): string {
 
 /** "26 nov 2026" */
 export function formatearFecha(iso: string): string {
-  return sinPuntoDeAbreviatura(aFecha(iso).toLocaleDateString(LOCAL, { day: 'numeric', month: 'short', year: 'numeric' }))
+  return sinPuntoDeAbreviatura(aFecha(iso).toLocaleDateString(LOCAL, {
+    day: 'numeric', month: 'short', year: 'numeric', timeZone: iso.includes('T') ? ZONA_LIMA : undefined,
+  }))
 }
 
 /** "26 nov" */
@@ -44,7 +53,7 @@ export function formatearFechaLarga(iso: string): string {
 /** "15 sep 2026, 6:30 p. m." */
 export function formatearFechaHora(iso: string): string {
   const fecha = aFecha(iso)
-  const hora = fecha.toLocaleTimeString(LOCAL, { hour: 'numeric', minute: '2-digit' })
+  const hora = fecha.toLocaleTimeString(LOCAL, { hour: 'numeric', minute: '2-digit', timeZone: ZONA_LIMA })
   return `${formatearFecha(iso)}, ${hora}`
 }
 

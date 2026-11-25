@@ -196,12 +196,15 @@ class CarteraCliente:
             situacion = "EN_MORA"
         elif proximo is not None and proximo <= hoy + timedelta(days=7):
             situacion = "POR_VENCER"
+        saldo = servicio_compras.sumar_capital_pendiente(self.compras.values(), moneda)
+        saldos_previos = [self.saldo_historico(c, moneda) for c in cierres]
         return PosicionCliente(
             cliente_id=self.cliente.id_cliente, moneda=moneda,
-            saldo_capital=servicio_compras.sumar_capital_pendiente(self.compras.values(), moneda),
+            saldo_capital=saldo, saldo_capital_pen=a_soles(saldo, moneda),
             mora_acumulada=mora, dias_atraso=dias_atraso, situacion=situacion, proximo_vencimiento=proximo,
             monto_proximo_pago=proximos[proximo] if proximo is not None else None,
-            saldos_cierre_previos=[self.saldo_historico(c, moneda) for c in cierres],
+            saldos_cierre_previos=saldos_previos,
+            saldos_cierre_previos_pen=saldos_previos if moneda == PEN else [self.saldo_historico(c, PEN) for c in cierres],
         )
 
 
@@ -281,7 +284,7 @@ def tablero(db: Session, tienda_id: int) -> RespuestaTablero:
     return RespuestaTablero(
         hoy=hoy, posiciones=posiciones, cobranza_semanal=cobranza, cuotas_del_mes=cuotas, cierres_mensuales=cierres_mensuales,
         kpis=IndicadoresTablero(
-            saldo_por_cobrar=sum((a_soles(p.saldo_capital, p.moneda) for p in posiciones), CERO),
+            saldo_por_cobrar=sum((p.saldo_capital_pen for p in posiciones), CERO),
             cuotas_del_mes=sum((q.monto for q in cuotas), CERO),
             mora_acumulada=sum((a_soles(p.mora_acumulada, p.moneda) for p in posiciones), CERO),
             clientes_activos=sum(c.cliente.activo for c in carteras),

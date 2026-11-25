@@ -4,7 +4,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Configuracion(BaseSettings):
-    nombre_app: str = "TBF Finanzas API"
+    nombre_app: str = "Bizon API"
     url_base_datos: str = "postgresql+psycopg2://postgres:postgres@localhost:5432/tbf_finanzas"
     clave_secreta: str = "2312"
     minutos_expiracion_token: int = 60

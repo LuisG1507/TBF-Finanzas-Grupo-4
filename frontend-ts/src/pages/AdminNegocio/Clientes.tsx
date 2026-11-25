@@ -7,12 +7,13 @@ import { Campo } from '../../components/ui/Campo'
 import { Insignia } from '../../components/ui/Insignia'
 import { Modal } from '../../components/ui/Modal'
 import { Tarjeta } from '../../components/ui/Tarjeta'
-import { siguienteId, useDatos } from '../../contexts/datos'
-import { nombreCompleto } from '../../data/mock'
-import type { Cliente, TipoTasa } from '../../types/dominio'
+import { pedir } from '../../api/cliente'
+import { useAccion, useConsulta, useLista } from '../../api/consultas'
+import { EstadoConsulta } from '../../components/ui/EstadoConsulta'
+import type { Cliente, CondicionCredito, Moneda, TasaPactada, TipoTasa } from '../../types/dominio'
 import { TIPO_TASA, nombreDelPlazo } from '../../utils/etiquetas'
-import { formatearSoles, formatearTasa, plural } from '../../utils/formato'
-import { coincide } from '../../utils/texto'
+import { formatearFecha, formatearMonto, formatearTasa, hoyLima, plural } from '../../utils/formato'
+import { coincide, nombreCompleto } from '../../utils/texto'
 import tabla from '../../components/ui/Tabla.module.css'
 import formulario from '../../styles/formulario.module.css'
 import pagina from '../../styles/pagina.module.css'
@@ -29,17 +30,33 @@ function nombreConMayuscula(dias: number): string {
 }
 
 /** "Nominal anual · cap. mensual" o "Efectiva anual". */
-function describirTasa(tipo: TipoTasa, plazoDias: number, capitalizacionDias?: number): string {
-  const base = `${TIPO_TASA[tipo]} ${nombreDelPlazo(plazoDias)}`
-  return tipo === 'NOMINAL' && capitalizacionDias ? `${base} · cap. ${nombreDelPlazo(capitalizacionDias)}` : base
+function describirTasa(tasa: TasaPactada): string {
+  const base = TIPO_TASA[tasa.tipo] + ' ' + nombreDelPlazo(tasa.plazo_dias)
+  return tasa.capitalizacion_dias ? base + ' · cap. ' + nombreDelPlazo(tasa.capitalizacion_dias) : base
+}
+
+function leerTasa(datos: FormData, sufijo: 'comp' | 'mora', nombre: string) {
+  const tipo = datos.get('tipo_tasa_' + sufijo)
+  return {
+    tipo,
+    tasa_pct: datos.get(nombre),
+    plazo_tasa: Number(datos.get('plazo_tasa_' + sufijo + '_dias')),
+    capitalizacion: tipo === 'NOMINAL' ? Number(datos.get('capitaliz_' + sufijo + '_dias')) : null,
+  }
 }
 
 export function Clientes() {
-  // La lista es compartida: un cliente nuevo aparece también en Nueva compra y en Registrar pago.
-  const { clientes, agregarCliente } = useDatos()
+  const carga = useLista<Cliente>('/clientes')
+  const clientes = carga.datos ?? []
+  const accion = useAccion()
+  const monedas = useConsulta<Moneda[]>('/monedas')
+  const [clienteCondicion, setClienteCondicion] = useState<Cliente | null>(null)
+  const [clienteHistorial, setClienteHistorial] = useState<Cliente | null>(null)
+  const historial = useConsulta<CondicionCredito[]>(clienteHistorial ? '/clientes/' + clienteHistorial.id_cliente + '/condiciones' : null)
+  const cerrarHistorial = useCallback(() => setClienteHistorial(null), [])
   const [modalAbierto, setModalAbierto] = useState(false)
   const [consulta, setConsulta] = useState('')
-  const cerrarModal = useCallback(() => setModalAbierto(false), [])
+  const cerrarModal = useCallback(() => { setModalAbierto(false); setClienteCondicion(null) }, [])
 
   const activos = clientes.filter((cliente) => cliente.activo).length
   const visibles = clientes.filter((cliente) => coincide(consulta, nombreCompleto(cliente), cliente.numero_documento))
@@ -47,51 +64,62 @@ export function Clientes() {
   function alCrearCliente(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault()
     const datos = new FormData(evento.currentTarget)
-    const idCliente = siguienteId(clientes.map((cliente) => cliente.id_cliente))
-    const tipoComp = datos.get('tipo_tasa_comp') as TipoTasa
-    const tipoMora = datos.get('tipo_tasa_mora') as TipoTasa
-    const nuevo: Cliente = {
-      id_cliente: idCliente,
-      tipo_documento: String(datos.get('tipo_documento')),
-      numero_documento: String(datos.get('numero_documento')),
-      nombres: String(datos.get('nombres')),
-      apellidos: String(datos.get('apellidos')),
-      telefono: String(datos.get('telefono') || '') || undefined,
-      email: String(datos.get('email') || '') || undefined,
-      activo: true,
-      condicion: {
-        id_condicion: idCliente,
-        cliente_id: idCliente,
-        moneda_codigo: 'PEN',
-        tasa_compensatoria: Number(datos.get('tasa_compensatoria')).toFixed(7),
-        tipo_tasa_comp: tipoComp,
-        plazo_tasa_comp_dias: Number(datos.get('plazo_tasa_comp_dias')),
-        capitaliz_comp_dias: tipoComp === 'NOMINAL' ? Number(datos.get('capitaliz_comp_dias')) : undefined,
-        tasa_moratoria: Number(datos.get('tasa_moratoria')).toFixed(7),
-        tipo_tasa_mora: tipoMora,
-        plazo_tasa_mora_dias: Number(datos.get('plazo_tasa_mora_dias')),
-        capitaliz_mora_dias: tipoMora === 'NOMINAL' ? Number(datos.get('capitaliz_mora_dias')) : undefined,
-        limite_credito: Number(datos.get('limite_credito')).toFixed(2),
-        max_meses: Number(datos.get('max_meses')),
-        dia_corte: Number(datos.get('dia_corte')),
-        hora_corte: '00:00',
-        dia_pago: Number(datos.get('dia_pago')),
-      },
+    const condicion = {
+      moneda: datos.get('moneda'),
+      tasa_compensatoria: leerTasa(datos, 'comp', 'tasa_compensatoria'),
+      tasa_moratoria: leerTasa(datos, 'mora', 'tasa_moratoria'),
+      limite_credito: datos.get('limite_credito'),
+      max_meses: Number(datos.get('max_meses')),
+      dia_corte: Number(datos.get('dia_corte')),
+      hora_corte: datos.get('hora_corte') || '00:00',
+      dia_pago: Number(datos.get('dia_pago')),
     }
-    agregarCliente(nuevo)
-    setModalAbierto(false)
+    void accion.ejecutar(async () => {
+      if (clienteCondicion) {
+        await pedir('/clientes/' + clienteCondicion.id_cliente + '/condicion', { method: 'PUT', cuerpo: condicion })
+      } else {
+        await pedir('/clientes', {
+          method: 'POST',
+          cuerpo: {
+            tipo_documento: datos.get('tipo_documento'),
+            numero_documento: datos.get('numero_documento'),
+            nombres: datos.get('nombres'),
+            apellidos: datos.get('apellidos'),
+            telefono: datos.get('telefono') || null,
+            direccion: datos.get('direccion') || null,
+            email: datos.get('email') || null,
+            usuario: datos.get('usuario') || null,
+            password: datos.get('password'),
+            condicion,
+          },
+        })
+      }
+      carga.recargar()
+      cerrarModal()
+    })
   }
+
+  function alternarCliente(cliente: Cliente) {
+    void accion.ejecutar(async () => {
+      await pedir('/clientes/' + cliente.id_cliente + '/' + (cliente.activo ? 'baja' : 'alta'), { method: 'POST' })
+      carga.recargar()
+    })
+  }
+
+  const actual = clienteCondicion?.condicion
 
   return (
     <Shell
       titulo="Clientes"
       subtitulo="Quiénes tienen crédito en tu tienda y bajo qué condiciones."
       acciones={
-        <Boton icono="mas" onClick={() => setModalAbierto(true)}>
+        <Boton icono="mas" onClick={() => { accion.limpiarError(); setModalAbierto(true) }}>
           Nuevo cliente
         </Boton>
       }
     >
+      <EstadoConsulta {...carga} />
+      {!modalAbierto && <EstadoConsulta error={accion.error} />}
       <Tarjeta relleno="ninguno">
         <div className={pagina.barraTabla}>
           <p className={pagina.barraTablaTexto}>
@@ -137,23 +165,34 @@ export function Clientes() {
                       </div>
                     </td>
                     <td>
-                      <div className={tabla.cifras}>{formatearTasa(condicion.tasa_compensatoria)}</div>
+                      <div className={tabla.cifras}>{condicion ? formatearTasa(condicion.tasa_compensatoria.tasa_pct) : '—'}</div>
                       <div className={tabla.celdaSecundaria}>
-                        {describirTasa(condicion.tipo_tasa_comp, condicion.plazo_tasa_comp_dias, condicion.capitaliz_comp_dias)}
+                        {condicion && describirTasa(condicion.tasa_compensatoria)}
                       </div>
                     </td>
                     <td>
-                      <div className={tabla.cifras}>{formatearTasa(condicion.tasa_moratoria)}</div>
+                      <div className={tabla.cifras}>{condicion ? formatearTasa(condicion.tasa_moratoria.tasa_pct) : '—'}</div>
                       <div className={tabla.celdaSecundaria}>
-                        {describirTasa(condicion.tipo_tasa_mora, condicion.plazo_tasa_mora_dias, condicion.capitaliz_mora_dias)}
+                        {condicion && describirTasa(condicion.tasa_moratoria)}
                       </div>
                     </td>
-                    <td className={[tabla.numerica, tabla.fuerte].join(' ')}>{formatearSoles(condicion.limite_credito)}</td>
+                    <td className={[tabla.numerica, tabla.fuerte].join(' ')}>{condicion ? formatearMonto(condicion.limite_credito, condicion.moneda.codigo_iso) : '—'}</td>
                     <td className={tabla.sinCorte}>
-                      Día {condicion.dia_corte} / día {condicion.dia_pago}
+                      {condicion ? 'Día ' + condicion.dia_corte + ' / día ' + condicion.dia_pago : '—'}
                     </td>
                     <td>
                       <Insignia texto={cliente.activo ? 'Activo' : 'Dado de baja'} tono={cliente.activo ? 'exito' : 'neutro'} />
+                      <div className={tabla.grupoInsignias}>
+                        <Boton variante="fantasma" tamano="pequeno" onClick={() => setClienteHistorial(cliente)}>Historial</Boton>
+                        {cliente.activo && (
+                          <Boton variante="fantasma" tamano="pequeno" onClick={() => { accion.limpiarError(); setClienteCondicion(cliente); setModalAbierto(true) }}>
+                            Cambiar condiciones
+                          </Boton>
+                        )}
+                        <Boton variante="fantasma" tamano="pequeno" disabled={accion.ocupado} onClick={() => alternarCliente(cliente)}>
+                          {cliente.activo ? 'Dar de baja' : 'Reactivar'}
+                        </Boton>
+                      </div>
                     </td>
                   </tr>
                 )
@@ -161,18 +200,35 @@ export function Clientes() {
             </tbody>
           </table>
         </div>
-        {visibles.length === 0 && <p className={tabla.vacio}>Ningún cliente coincide con «{consulta}».</p>}
+        {carga.datos && visibles.length === 0 && <p className={tabla.vacio}>Ningún cliente coincide con «{consulta}».</p>}
       </Tarjeta>
+
+      {clienteHistorial && (
+        <Modal titulo="Historial de condiciones" descripcion={nombreCompleto(clienteHistorial)} onCerrar={cerrarHistorial} ancho={700}>
+          <EstadoConsulta {...historial} />
+          {historial.datos?.length === 0 && <p className={tabla.vacio}>Todavía no tiene condiciones registradas.</p>}
+          {historial.datos?.map((condicion) => (
+            <div key={condicion.id_condicion} className={formulario.seccion}>
+              <strong>{formatearFecha(condicion.vigente_desde)} · {condicion.vigente_hasta ? 'hasta ' + formatearFecha(condicion.vigente_hasta) : 'Vigente'}</strong>
+              <p>Compensatoria {formatearTasa(condicion.tasa_compensatoria.tasa_pct)} · {describirTasa(condicion.tasa_compensatoria)}</p>
+              <p>Moratoria {formatearTasa(condicion.tasa_moratoria.tasa_pct)} · {describirTasa(condicion.tasa_moratoria)}</p>
+              <p>{formatearMonto(condicion.limite_credito, condicion.moneda.codigo_iso)} de límite · corte {condicion.dia_corte} a las {condicion.hora_corte.slice(0, 5)} · pago {condicion.dia_pago}</p>
+            </div>
+          ))}
+        </Modal>
+      )}
 
       {modalAbierto && (
         <Modal
-          titulo="Nuevo cliente"
+          titulo={clienteCondicion ? 'Cambiar condiciones' : 'Nuevo cliente'}
           descripcion="Sus condiciones de crédito se aplican a las compras que haga desde hoy."
           onCerrar={cerrarModal}
           ancho={700}
         >
           <form className={formulario.formulario} onSubmit={alCrearCliente}>
-            <div className={formulario.seccion}>
+            <EstadoConsulta error={accion.error} />
+            <EstadoConsulta {...monedas} />
+            {!clienteCondicion && <div className={formulario.seccion}>
               <p className={formulario.seccionTitulo}>Datos generales</p>
               <div className={formulario.rejilla2}>
                 <Campo etiqueta="Tipo de documento" ayuda="El documento con el que se identifica el cliente." obligatorio htmlFor="tipo_documento">
@@ -194,18 +250,25 @@ export function Clientes() {
                 <Campo etiqueta="Teléfono" ayuda="Opcional. Para avisarle de sus vencimientos." htmlFor="telefono">
                   <input id="telefono" name="telefono" type="tel" className="campo-entrada" />
                 </Campo>
-                <Campo etiqueta="Correo" ayuda="Opcional. Ahí recibirá su estado de cuenta." htmlFor="email">
+                <Campo etiqueta="Correo" ayuda="Opcional. Correo de contacto." htmlFor="email">
                   <input id="email" name="email" type="email" className="campo-entrada" />
                 </Campo>
+                <Campo etiqueta="Dirección" htmlFor="direccion"><input id="direccion" name="direccion" className="campo-entrada" /></Campo>
+                <Campo etiqueta="Usuario" ayuda="Si lo dejas vacío, se usará su número de documento." htmlFor="usuario">
+                  <input id="usuario" name="usuario" className="campo-entrada" autoComplete="off" />
+                </Campo>
+                <Campo etiqueta="Contraseña inicial" obligatorio htmlFor="password">
+                  <input id="password" name="password" type="password" minLength={8} required autoComplete="new-password" className="campo-entrada" />
+                </Campo>
               </div>
-            </div>
+            </div>}
 
             <div className={formulario.seccion}>
               <div>
                 <p className={formulario.seccionTitulo}>Tasa de interés compensatorio</p>
                 <p className={formulario.seccionDescripcion}>Es la que se cobra siempre, por el hecho de otorgar el crédito.</p>
               </div>
-              <CamposDeTasa sufijo="comp" nombreTasa="tasa_compensatoria" />
+              <CamposDeTasa sufijo="comp" nombreTasa="tasa_compensatoria" inicial={actual?.tasa_compensatoria} />
             </div>
 
             <div className={formulario.seccion}>
@@ -215,19 +278,19 @@ export function Clientes() {
                   Se pacta aparte de la compensatoria y solo se aplica si el cliente paga después de su fecha de pago.
                 </p>
               </div>
-              <CamposDeTasa sufijo="mora" nombreTasa="tasa_moratoria" />
+              <CamposDeTasa sufijo="mora" nombreTasa="tasa_moratoria" inicial={actual?.tasa_moratoria} />
             </div>
 
             <div className={formulario.seccion}>
               <p className={formulario.seccionTitulo}>Condiciones del crédito</p>
               <div className={formulario.rejilla2}>
-                <Campo etiqueta="Moneda" ayuda="Por ahora el sistema opera únicamente en soles." htmlFor="moneda">
-                  <select id="moneda" className="campo-entrada" disabled defaultValue="PEN">
-                    <option value="PEN">Soles (PEN)</option>
+                <Campo etiqueta="Moneda" obligatorio htmlFor="moneda">
+                  <select key={monedas.datos?.length ?? 0} id="moneda" name="moneda" className="campo-entrada" defaultValue={actual?.moneda.codigo_iso ?? 'PEN'}>
+                    {(monedas.datos ?? []).map((moneda) => <option key={moneda.codigo_iso} value={moneda.codigo_iso}>{moneda.codigo_iso} ({moneda.simbolo})</option>)}
                   </select>
                 </Campo>
                 <Campo
-                  etiqueta="Límite de crédito (S/)"
+                  etiqueta="Límite de crédito"
                   ayuda="Tope de capital pendiente que puede tener este cliente."
                   obligatorio
                   htmlFor="limite_credito"
@@ -235,6 +298,7 @@ export function Clientes() {
                   <input
                     id="limite_credito"
                     name="limite_credito"
+                    defaultValue={actual?.limite_credito}
                     type="number"
                     step="0.01"
                     min="0"
@@ -246,22 +310,26 @@ export function Clientes() {
               </div>
               <div className={formulario.rejilla3}>
                 <Campo etiqueta="Máximo de cuotas" ayuda="El mayor número de meses que se le puede ofrecer." obligatorio htmlFor="max_meses">
-                  <input id="max_meses" name="max_meses" type="number" min={1} step={1} inputMode="numeric" className="campo-entrada" required />
+                  <input id="max_meses" name="max_meses" type="number" defaultValue={actual?.max_meses} min={1} max={120} step={1} inputMode="numeric" className="campo-entrada" required />
                 </Campo>
                 <Campo etiqueta="Día de corte" ayuda="Día del mes (1 a 28) en que se cierra su período de compras." obligatorio htmlFor="dia_corte">
-                  <input id="dia_corte" name="dia_corte" type="number" min={1} max={28} step={1} inputMode="numeric" className="campo-entrada" required />
+                  <input id="dia_corte" name="dia_corte" type="number" defaultValue={actual?.dia_corte} min={1} max={28} step={1} inputMode="numeric" className="campo-entrada" required />
                 </Campo>
                 <Campo etiqueta="Día de pago" ayuda="Día del mes (1 a 28) en que se compromete a pagar." obligatorio htmlFor="dia_pago">
-                  <input id="dia_pago" name="dia_pago" type="number" min={1} max={28} step={1} inputMode="numeric" className="campo-entrada" required />
+                  <input id="dia_pago" name="dia_pago" type="number" defaultValue={actual?.dia_pago} min={1} max={28} step={1} inputMode="numeric" className="campo-entrada" required />
                 </Campo>
               </div>
             </div>
 
+            {clienteCondicion && <p className={formulario.seccionDescripcion}>Los cambios rigen desde {formatearFecha(hoyLima())}.</p>}
+            <Campo etiqueta="Hora de corte" ayuda="Hora de Lima." htmlFor="hora_corte">
+              <input id="hora_corte" name="hora_corte" type="time" className="campo-entrada" defaultValue={actual?.hora_corte.slice(0, 5) ?? '00:00'} />
+            </Campo>
             <div className={formulario.acciones}>
               <Boton variante="secundario" onClick={cerrarModal}>
                 Cancelar
               </Boton>
-              <Boton type="submit">Guardar cliente</Boton>
+              <Boton type="submit" disabled={accion.ocupado || !monedas.datos}>{clienteCondicion ? 'Guardar condiciones' : 'Guardar cliente'}</Boton>
             </div>
           </form>
         </Modal>
@@ -274,11 +342,12 @@ interface CamposDeTasaProps {
   /** comp = compensatoria · mora = moratoria. Forma los nombres de los campos, iguales a los del backend. */
   sufijo: 'comp' | 'mora'
   nombreTasa: 'tasa_compensatoria' | 'tasa_moratoria'
+  inicial?: TasaPactada
 }
 
 /** Los cuatro datos que definen una tasa pactada. La capitalización solo se pide si la tasa es nominal. */
-function CamposDeTasa({ sufijo, nombreTasa }: CamposDeTasaProps) {
-  const [tipo, setTipo] = useState<TipoTasa>('NOMINAL')
+function CamposDeTasa({ sufijo, nombreTasa, inicial }: CamposDeTasaProps) {
+  const [tipo, setTipo] = useState<TipoTasa>(inicial?.tipo ?? 'NOMINAL')
   const idTipo = `tipo_tasa_${sufijo}`
   const idPlazo = `plazo_tasa_${sufijo}_dias`
   const idCapitalizacion = `capitaliz_${sufijo}_dias`
@@ -297,21 +366,22 @@ function CamposDeTasa({ sufijo, nombreTasa }: CamposDeTasaProps) {
           <option value="EFECTIVA">Efectiva</option>
         </select>
       </Campo>
-      <Campo etiqueta="Tasa (%)" ayuda="Hasta 4 decimales al ingresarla; el sistema calcula con 7." obligatorio htmlFor={nombreTasa}>
+      <Campo etiqueta="Tasa (%)" ayuda="Mayor que cero. Puedes ingresar hasta 7 decimales." obligatorio htmlFor={nombreTasa}>
         <input
           id={nombreTasa}
           name={nombreTasa}
           type="number"
-          step="0.0001"
-          min="0"
+          step="0.0000001"
+          min="0.0000001"
+          defaultValue={inicial?.tasa_pct}
           inputMode="decimal"
           className="campo-entrada"
           required
         />
       </Campo>
       <Campo etiqueta="Plazo de la tasa" ayuda="A qué período corresponde la tasa que escribiste." obligatorio htmlFor={idPlazo}>
-        <select id={idPlazo} name={idPlazo} className="campo-entrada" defaultValue={360}>
-          {PLAZOS.map((dias) => (
+        <select id={idPlazo} name={idPlazo} className="campo-entrada" defaultValue={inicial?.plazo_dias ?? 360}>
+          {[...new Set([...(inicial ? [inicial.plazo_dias] : []), ...PLAZOS])].map((dias) => (
             <option key={dias} value={dias}>
               {nombreConMayuscula(dias)}
             </option>
@@ -325,8 +395,8 @@ function CamposDeTasa({ sufijo, nombreTasa }: CamposDeTasaProps) {
           obligatorio
           htmlFor={idCapitalizacion}
         >
-          <select id={idCapitalizacion} name={idCapitalizacion} className="campo-entrada" defaultValue={CAPITALIZACION_POR_DEFECTO}>
-            {PLAZOS.map((dias) => (
+          <select id={idCapitalizacion} name={idCapitalizacion} className="campo-entrada" defaultValue={inicial?.capitalizacion_dias ?? CAPITALIZACION_POR_DEFECTO}>
+            {[...new Set([...(inicial?.capitalizacion_dias ? [inicial.capitalizacion_dias] : []), ...PLAZOS])].map((dias) => (
               <option key={dias} value={dias}>
                 {nombreConMayuscula(dias)}
               </option>

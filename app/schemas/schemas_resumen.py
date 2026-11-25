@@ -12,12 +12,14 @@ class PosicionCliente(BaseModel):
     cliente_id: int
     moneda: str
     saldo_capital: Decimal
+    saldo_capital_pen: Decimal
     mora_acumulada: Decimal
     dias_atraso: int
     situacion: Literal["AL_DIA", "POR_VENCER", "EN_MORA"]
     proximo_vencimiento: date | None = None
     monto_proximo_pago: Decimal | None = None
     saldos_cierre_previos: list[Decimal]
+    saldos_cierre_previos_pen: list[Decimal]
 
 
 class CobranzaSemanal(BaseModel):

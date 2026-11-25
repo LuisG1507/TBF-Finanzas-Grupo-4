@@ -13,8 +13,11 @@ import { Medidor } from '../../components/ui/Medidor'
 import { Segmentado } from '../../components/ui/Segmentado'
 import { Tarjeta, TarjetaEncabezado } from '../../components/ui/Tarjeta'
 import { TarjetaKpi } from '../../components/ui/TarjetaKpi'
-import { useDatos } from '../../contexts/datos'
-import { HOY_DEMO, cierresMensualesDemo, cobranzaSemanalDemo, cuotasDelMesDemo, nombreCompleto, posicionesDemo } from '../../data/mock'
+import { useConsulta, useLista } from '../../api/consultas'
+import { EstadoConsulta } from '../../components/ui/EstadoConsulta'
+import type { Cliente } from '../../types/dominio'
+import type { RespuestaTablero } from '../../types/resumen'
+import { nombreCompleto } from '../../utils/texto'
 import { SITUACION_CLIENTE } from '../../utils/etiquetas'
 import {
   formatearFechaCorta,
@@ -22,6 +25,7 @@ import {
   formatearPorcentaje,
   formatearRango,
   formatearSoles,
+  formatearMonto,
   formatearSolesEntero,
   formatearVariacion,
   nombreDelMes,
@@ -40,75 +44,83 @@ const TRAMOS_ANTIGUEDAD: { clave: string; etiqueta: string; tono: Segmento['tono
 ]
 
 export function Dashboard() {
-  // Los clientes salen de la lista compartida, así el conteo incluye a los recién registrados.
-  const { clientes } = useDatos()
+  const tablero = useConsulta<RespuestaTablero>('/dashboard')
+  const listaClientes = useLista<Cliente>('/clientes')
   const [vistaCobranza, setVistaCobranza] = useState<'grafico' | 'tabla'>('grafico')
 
+  if (!tablero.datos || !listaClientes.datos) {
+    return <Shell titulo="Resumen"><EstadoConsulta {...tablero} /><EstadoConsulta {...listaClientes} /></Shell>
+  }
+
+  const clientes = listaClientes.datos
+  const { hoy, kpis, posiciones, cuotas_del_mes: cuotasDelMes, cobranza_semanal: cobranzaSemanal, cierres_mensuales: cierresMensuales } = tablero.datos
+
   // Los meses de las tendencias: los cierres anteriores más el mes en curso.
-  const meses = [...cierresMensualesDemo.map((cierre) => cierre.mes), HOY_DEMO]
-  const mesActual = nombreDelMes(HOY_DEMO)
+  const meses = [...cierresMensuales.map((cierre) => cierre.mes), hoy]
+  const mesActual = nombreDelMes(hoy)
   const mesAnterior = nombreDelMes(meses[meses.length - 2])
   const etiquetasPorMes = (valores: number[], formatear: (valor: number) => string) =>
     valores.map((valor, indice) => `${nombreDelMes(meses[indice])}: ${formatear(valor)}`)
 
   // ---------- Saldo por cobrar ----------
-  const saldoPorCobrar = sumarMontos(posicionesDemo.map((posicion) => posicion.saldo_capital))
+  const saldoPorCobrar = Number(kpis.saldo_por_cobrar)
   const saldosPorMes = meses.map((_, indice) =>
-    sumarMontos(posicionesDemo.map((posicion) => [...posicion.saldos_cierre_previos, posicion.saldo_capital][indice])),
+    sumarMontos(posiciones.map((posicion) => [...posicion.saldos_cierre_previos_pen, posicion.saldo_capital_pen][indice])),
   )
   const saldoMesAnterior = saldosPorMes[saldosPorMes.length - 2]
-  const variacionSaldo = (saldoPorCobrar - saldoMesAnterior) / saldoMesAnterior
+  const variacionSaldo = saldoMesAnterior > 0 ? (saldoPorCobrar - saldoMesAnterior) / saldoMesAnterior : null
 
   // ---------- Cuotas del mes ----------
-  const totalCuotasMes = sumarMontos(cuotasDelMesDemo.map((cuota) => cuota.monto))
-  const cuotasCobradas = cuotasDelMesDemo.filter((cuota) => cuota.estado === 'PAGADA')
-  const cuotasPorMes = [...cierresMensualesDemo.map((cierre) => Number(cierre.cuotas_programadas)), totalCuotasMes]
+  const totalCuotasMes = Number(kpis.cuotas_del_mes)
+  const cuotasCobradas = cuotasDelMes.filter((cuota) => cuota.estado === 'PAGADA')
+  const cuotasPorMes = [...cierresMensuales.map((cierre) => Number(cierre.cuotas_programadas)), totalCuotasMes]
 
   // ---------- Mora acumulada ----------
-  const moraAcumulada = sumarMontos(posicionesDemo.map((posicion) => posicion.mora_acumulada))
-  const clientesEnMora = posicionesDemo.filter((posicion) => posicion.dias_atraso > 0).length
-  const moraPorMes = [...cierresMensualesDemo.map((cierre) => Number(cierre.mora_acumulada)), moraAcumulada]
+  const moraAcumulada = Number(kpis.mora_acumulada)
+  const clientesEnMora = posiciones.filter((posicion) => posicion.situacion === 'EN_MORA').length
+  const moraPorMes = [...cierresMensuales.map((cierre) => Number(cierre.mora_acumulada)), moraAcumulada]
   const aumentoMora = sumarMontos([moraAcumulada, -moraPorMes[moraPorMes.length - 2]])
 
   // ---------- Clientes activos ----------
-  const clientesActivos = clientes.filter((cliente) => cliente.activo).length
-  const activosPorMes = [...cierresMensualesDemo.map((cierre) => cierre.clientes_activos), clientesActivos]
+  const clientesActivos = kpis.clientes_activos
+  const activosPorMes = [...cierresMensuales.map((cierre) => cierre.clientes_activos), clientesActivos]
   const nuevosActivos = clientesActivos - activosPorMes[activosPorMes.length - 2]
 
   // ---------- Cobranza por semana ----------
-  const barrasCobranza: DatoBarra[] = cobranzaSemanalDemo.map((semana, indice) => ({
+  const barrasCobranza: DatoBarra[] = cobranzaSemanal.map((semana, indice) => ({
     clave: semana.desde,
     etiquetaEje: formatearFechaCorta(semana.desde),
     etiquetaLarga: formatearRango(semana.desde, semana.hasta),
     valor: Number(semana.cobrado),
     meta: Number(semana.programado),
-    destacada: indice === cobranzaSemanalDemo.length - 1,
+    destacada: indice === cobranzaSemanal.length - 1,
   }))
-  const cobradoOchoSemanas = sumarMontos(cobranzaSemanalDemo.map((semana) => semana.cobrado))
-  const programadoOchoSemanas = sumarMontos(cobranzaSemanalDemo.map((semana) => semana.programado))
+  const cobradoOchoSemanas = sumarMontos(cobranzaSemanal.map((semana) => semana.cobrado))
+  const programadoOchoSemanas = sumarMontos(cobranzaSemanal.map((semana) => semana.programado))
 
   // ---------- Cobranza al día (lo que ya venció este mes) ----------
-  const cuotasYaVencidas = cuotasDelMesDemo.filter((cuota) => cuota.fecha_vencimiento <= HOY_DEMO)
+  const cuotasYaVencidas = cuotasDelMes.filter((cuota) => cuota.fecha_vencimiento <= hoy)
   const vencidoALaFecha = sumarMontos(cuotasYaVencidas.map((cuota) => cuota.monto))
-  const cobradoALaFecha = sumarMontos(cuotasCobradas.map((cuota) => cuota.monto))
+  const vencidasCobradas = cuotasYaVencidas.filter((cuota) => cuota.estado === 'PAGADA')
+  const cobradoALaFecha = sumarMontos(vencidasCobradas.map((cuota) => cuota.monto))
   const cobranzaAlDia = vencidoALaFecha > 0 ? cobradoALaFecha / vencidoALaFecha : 1
 
   // ---------- Clientes con saldo ----------
-  const filasClientes = posicionesDemo
+  const filasClientes = posiciones
     .filter((posicion) => Number(posicion.saldo_capital) > 0)
-    .sort((a, b) => Number(b.saldo_capital) - Number(a.saldo_capital))
+    .sort((a, b) => Number(b.saldo_capital_pen) - Number(a.saldo_capital_pen))
 
   // ---------- Cartera por antigüedad ----------
   const segmentosCartera: Segmento[] = TRAMOS_ANTIGUEDAD.map((tramo) => {
-    const posiciones = posicionesDemo.filter(
+    const posicionesDelTramo = posiciones.filter(
       (posicion) =>
         Number(posicion.saldo_capital) > 0 && posicion.dias_atraso >= tramo.desde && posicion.dias_atraso <= tramo.hasta,
     )
-    const monto = sumarMontos(posiciones.map((posicion) => posicion.saldo_capital))
+    const monto = sumarMontos(posicionesDelTramo.map((posicion) => posicion.saldo_capital_pen))
     return {
       clave: tramo.clave,
       etiqueta: tramo.etiqueta,
-      detalle: plural(posiciones.length, 'cliente', 'clientes'),
+      detalle: plural(posicionesDelTramo.length, 'cliente', 'clientes'),
       valor: monto,
       textoValor: formatearSoles(monto),
       tono: tramo.tono,
@@ -119,7 +131,7 @@ export function Dashboard() {
   return (
     <Shell
       titulo="Resumen"
-      subtitulo={`Así va el fiado de tu tienda al ${formatearFechaLarga(HOY_DEMO)}.`}
+      subtitulo={`Así va el fiado de tu tienda al ${formatearFechaLarga(hoy)}.`}
       acciones={
         <>
           <EnlaceBoton to="/admin-negocio/pagos/nuevo" variante="secundario" icono="billete">
@@ -137,7 +149,7 @@ export function Dashboard() {
           etiqueta="Saldo por cobrar"
           valor={formatearSoles(saldoPorCobrar)}
           icono="billete"
-          variacion={{
+          variacion={variacionSaldo === null ? undefined : {
             texto: `${formatearVariacion(variacionSaldo)} vs. ${mesAnterior}`,
             tono: 'neutro',
             direccion: variacionSaldo >= 0 ? 'sube' : 'baja',
@@ -153,7 +165,7 @@ export function Dashboard() {
           etiqueta={`Cuotas de ${mesActual}`}
           valor={formatearSoles(totalCuotasMes)}
           icono="calendario"
-          variacion={{ texto: `${cuotasCobradas.length} de ${cuotasDelMesDemo.length} cobradas`, tono: 'favorable' }}
+          variacion={{ texto: `${cuotasCobradas.length} de ${cuotasDelMes.length} cobradas`, tono: 'favorable' }}
           detalle="Vencen este mes"
           serie={{
             valores: cuotasPorMes,
@@ -184,7 +196,9 @@ export function Dashboard() {
           variacion={
             nuevosActivos > 0
               ? { texto: `+${nuevosActivos} vs. ${mesAnterior}`, tono: 'favorable', direccion: 'sube' }
-              : { texto: `Igual que en ${mesAnterior}`, tono: 'neutro' }
+              : nuevosActivos < 0
+                ? { texto: `${nuevosActivos} vs. ${mesAnterior}`, tono: 'neutro', direccion: 'baja' }
+                : { texto: `Igual que en ${mesAnterior}`, tono: 'neutro' }
           }
           detalle={`de ${clientes.length} registrados`}
           serie={{
@@ -242,7 +256,7 @@ export function Dashboard() {
                   </tr>
                 </thead>
                 <tbody>
-                  {cobranzaSemanalDemo.map((semana) => (
+                  {cobranzaSemanal.map((semana) => (
                     <tr key={semana.desde}>
                       <td>{formatearRango(semana.desde, semana.hasta)}</td>
                       <td className={tabla.numerica}>{formatearSoles(semana.programado)}</td>
@@ -278,7 +292,7 @@ export function Dashboard() {
               sobreSuave
             />
             <p className={styles.cifraNota}>
-              Faltan {plural(cuotasYaVencidas.length - cuotasCobradas.length, 'cuota vencida', 'cuotas vencidas')} por cobrar.
+              Faltan {plural(cuotasYaVencidas.length - vencidasCobradas.length, 'cuota vencida', 'cuotas vencidas')} por cobrar.
             </p>
           </div>
         </Tarjeta>
@@ -332,12 +346,12 @@ export function Dashboard() {
                           </div>
                         </div>
                       </td>
-                      <td className={[tabla.numerica, tabla.fuerte].join(' ')}>{formatearSoles(posicion.saldo_capital)}</td>
+                      <td className={[tabla.numerica, tabla.fuerte].join(' ')}>{formatearMonto(posicion.saldo_capital, posicion.moneda)}</td>
                       <td>
                         <Insignia texto={situacion.texto} tono={situacion.tono} />
                         {posicion.proximo_vencimiento && (
                           <div className={[tabla.celdaSecundaria, tabla.sinCorte, styles.vencimiento].join(' ')}>
-                            {posicion.dias_atraso > 0
+                            {posicion.situacion === 'EN_MORA'
                               ? `Venció hace ${plural(posicion.dias_atraso, 'día', 'días')}`
                               : `Vence el ${formatearFechaCorta(posicion.proximo_vencimiento)}`}
                           </div>
@@ -346,7 +360,7 @@ export function Dashboard() {
                       <td>
                         <MiniTendencia
                           valores={saldos}
-                          descripcion={`Saldo de ${nombre} de ${nombreDelMes(meses[0])} a ${mesActual}: de ${formatearSoles(saldos[0])} a ${formatearSoles(posicion.saldo_capital)}.`}
+                          descripcion={`Saldo de ${nombre} de ${nombreDelMes(meses[0])} a ${mesActual}: de ${formatearMonto(saldos[0], posicion.moneda)} a ${formatearMonto(posicion.saldo_capital, posicion.moneda)}.`}
                         />
                       </td>
                     </tr>
@@ -355,6 +369,7 @@ export function Dashboard() {
               </tbody>
             </table>
           </div>
+          {filasClientes.length === 0 && <p className={tabla.vacio}>No hay clientes con capital pendiente.</p>}
         </Tarjeta>
 
         <Tarjeta>

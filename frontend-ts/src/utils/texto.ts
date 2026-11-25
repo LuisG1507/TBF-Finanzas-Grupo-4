@@ -7,8 +7,12 @@ function normalizar(texto: string): string {
 }
 
 /** true si la consulta aparece en alguno de los textos. Una consulta vacía coincide con todo. */
-export function coincide(consulta: string, ...textos: (string | undefined)[]): boolean {
+export function coincide(consulta: string, ...textos: (string | null | undefined)[]): boolean {
   const buscada = normalizar(consulta.trim())
   if (!buscada) return true
-  return textos.some((texto) => texto !== undefined && normalizar(texto).includes(buscada))
+  return textos.some((texto) => texto != null && normalizar(texto).includes(buscada))
+}
+
+export function nombreCompleto(cliente: { nombres: string; apellidos: string }): string {
+  return `${cliente.nombres} ${cliente.apellidos}`
 }
