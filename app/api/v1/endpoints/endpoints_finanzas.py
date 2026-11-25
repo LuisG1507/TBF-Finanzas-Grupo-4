@@ -5,6 +5,7 @@ from fastapi import APIRouter, HTTPException
 
 from app.schemas import schemas_finanzas as esquemas
 from app.services.finance import finance_amortizacion as amortizacion
+from app.services.finance import finance_mora as mora
 from app.services.finance import finance_pagos as pagos
 from app.services.finance import finance_tasas as tasas
 
@@ -127,7 +128,7 @@ def plazo_simple(datos: esquemas.EntradaSimplePlazo):
         t = tasas.calcular_plazo_simple(datos.monto, datos.capital, datos.tasa_pct)
     except ValueError as error:
         raise HTTPException(status_code=400, detail=str(error))
-    plazo_dias = int(tasas.redondear(t * _dias(datos.plazo_tasa), 0))
+    plazo_dias = tasas.dias_por_exceso(t * _dias(datos.plazo_tasa))
     return esquemas.RespuestaSimplePlazo(
         t=t,
         plazo_dias=plazo_dias,
@@ -155,6 +156,38 @@ def conversion_tasas(datos: esquemas.EntradaConversionTasa):
         tasa_puente_pct=puente,
         tasa_resultado_pct=resultado,
     )
+
+
+# --- Mora: Im = VN * [(1 + TE)^(dias/plazo) - 1]  o  Im = VN * [(1 + TN/m)^n - 1] ---
+
+@router.post("/mora", response_model=esquemas.RespuestaMora, summary="Interes moratorio y compensatorio por atraso (libro, formulas 34 a 37)")
+def calcular_mora(datos: esquemas.EntradaMora):
+    def _tasa(tipo, tasa_pct, plazo, capitalizacion) -> mora.TasaPorAtraso:
+        return mora.TasaPorAtraso(
+            tipo=tipo,
+            tasa_pct=tasa_pct,
+            plazo_tasa_dias=_dias(plazo),
+            capitalizacion_dias=_dias(capitalizacion) if tipo == tasas.TipoTasa.NOMINAL else None,
+        )
+
+    tasa_mora = _tasa(datos.tipo_tasa_mora, datos.tasa_mora_pct, datos.plazo_tasa_mora, datos.capitalizacion_mora)
+    tasa_comp = (
+        _tasa(datos.tipo_tasa_comp, datos.tasa_comp_pct, datos.plazo_tasa_comp, datos.capitalizacion_comp)
+        if datos.compensatorio_sigue_corriendo
+        else None
+    )
+    try:
+        resultado = mora.calcular_mora(
+            monto_vencido=datos.monto_vencido,
+            dias_atraso=datos.dias_atraso,
+            tasa_mora=tasa_mora,
+            tasa_compensatoria=tasa_comp,
+            compensatorio_sigue_corriendo=datos.compensatorio_sigue_corriendo,
+            comision_cobranza=datos.comision_cobranza,
+        )
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error))
+    return esquemas.RespuestaMora(**asdict(resultado))
 
 
 # --- Metodo frances: R = C' * TEP * (1+TEP)^n / ((1+TEP)^n - 1) ---

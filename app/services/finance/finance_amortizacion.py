@@ -57,30 +57,38 @@ def calcular_cuota_francesa(capital: Decimal, tep_pct: Decimal, num_cuotas: int)
     return capital * tep * factor / (factor - 1)
 
 
-def generar_cronograma(capital: Decimal, tep_pct: Decimal, num_cuotas: int, cuota: Decimal) -> tuple[list[FilaCronograma], Decimal]:
-    """Por cada periodo: I = TEP * SI, A = R - I, SF = SI - A. Devuelve las filas y el interes total."""
+def generar_cronograma(capital: Decimal, tep_pct: Decimal, num_cuotas: int, cuota: Decimal) -> list[FilaCronograma]:
+    """Cronograma que CUADRA con los montos ya redondeados a 2 decimales (capital y cuota llegan redondeados).
+
+    Por cada periodo: I = TEP * SI (redondeado), A = R - I, SF = SI - A, y el SI del periodo siguiente es
+    el SF de este. Asi, en cada fila interes + amortizacion = cuota y saldo inicial - amortizacion = saldo
+    final, y se puede reproducir con una calculadora a partir de la tabla.
+    En la ultima cuota la amortizacion es todo el saldo que queda (SF = 0) y la cuota se ajusta
+    (R = SI + I): absorbe los centimos de redondeo, como se hace en una entidad financiera."""
     tep = tep_pct / CIEN
     filas = []
     saldo = capital
-    interes_total = Decimal(0)
     for numero in range(1, num_cuotas + 1):
-        interes = saldo * tep
-        amortizacion = cuota - interes
+        interes = redondear(saldo * tep, DECIMALES_MONTO)
+        if numero == num_cuotas:
+            amortizacion = saldo
+            cuota_fila = amortizacion + interes
+        else:
+            cuota_fila = cuota
+            amortizacion = min(cuota - interes, saldo)
         saldo_final = saldo - amortizacion
-        interes_total += interes
         filas.append(
             FilaCronograma(
                 numero=numero,
-                saldo_inicial=redondear(saldo, DECIMALES_MONTO),
-                interes=redondear(interes, DECIMALES_MONTO),
-                amortizacion=redondear(amortizacion, DECIMALES_MONTO),
-                cuota=redondear(cuota, DECIMALES_MONTO),
-                # el residuo numerico de la ultima cuota no puede salir negativo
-                saldo_final=redondear(max(saldo_final, Decimal(0)), DECIMALES_MONTO),
+                saldo_inicial=saldo,
+                interes=interes,
+                amortizacion=amortizacion,
+                cuota=cuota_fila,
+                saldo_final=saldo_final,
             )
         )
         saldo = saldo_final
-    return filas, interes_total
+    return filas
 
 
 def calcular_plan_frances(
@@ -94,15 +102,18 @@ def calcular_plan_frances(
     dias_gracia: int,
 ) -> PlanFrances:
     tep_pct = calcular_tep_pct(tasa_pct, tipo, plazo_tasa_dias, capitalizacion_dias, periodo_pago_dias)
-    capital_capitalizado = capitalizar_gracia(capital, tep_pct, dias_gracia, periodo_pago_dias)
-    cuota = calcular_cuota_francesa(capital_capitalizado, tep_pct, num_cuotas)
-    cronograma, interes_total = generar_cronograma(capital_capitalizado, tep_pct, num_cuotas, cuota)
+    capital_exacto = capitalizar_gracia(capital, tep_pct, dias_gracia, periodo_pago_dias)
+    capital_capitalizado = redondear(capital_exacto, DECIMALES_MONTO)
+    # la cuota se calcula con la formula completa y recien al final se redondea a centimos
+    cuota = redondear(calcular_cuota_francesa(capital_exacto, tep_pct, num_cuotas), DECIMALES_MONTO)
+    cronograma = generar_cronograma(capital_capitalizado, tep_pct, num_cuotas, cuota)
+    # los totales son la suma de las filas: asi capital capitalizado + intereses = total a pagar, siempre
     return PlanFrances(
         tep_pct=tep_pct,
-        capital_capitalizado=redondear(capital_capitalizado, DECIMALES_MONTO),
-        interes_gracia=redondear(capital_capitalizado - capital, DECIMALES_MONTO),
-        cuota=redondear(cuota, DECIMALES_MONTO),
-        interes_total=redondear(interes_total, DECIMALES_MONTO),
-        total_a_pagar=redondear(cuota * num_cuotas, DECIMALES_MONTO),
+        capital_capitalizado=capital_capitalizado,
+        interes_gracia=capital_capitalizado - capital,
+        cuota=cuota,
+        interes_total=sum((f.interes for f in cronograma), Decimal(0)),
+        total_a_pagar=sum((f.cuota for f in cronograma), Decimal(0)),
         cronograma=cronograma,
     )
