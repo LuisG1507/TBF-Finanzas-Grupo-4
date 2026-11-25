@@ -1,12 +1,20 @@
-const CLAVE_TOKEN = 'tbf-token'
-export const EVENTO_SESION_EXPIRADA = 'tbf-sesion-expirada'
+const CLAVE_TOKEN = 'bizon-token'
+const CLAVE_TOKEN_ANTERIOR = 'tbf-token'
+export const EVENTO_SESION_EXPIRADA = 'bizon-sesion-expirada'
 
 function leerToken(): string | null {
+  let token: string | null = null
   try {
-    return sessionStorage.getItem(CLAVE_TOKEN)
+    token = sessionStorage.getItem(CLAVE_TOKEN)
+    if (!token) {
+      token = sessionStorage.getItem(CLAVE_TOKEN_ANTERIOR)
+      if (token) sessionStorage.setItem(CLAVE_TOKEN, token)
+    }
+    sessionStorage.removeItem(CLAVE_TOKEN_ANTERIOR)
   } catch {
-    return null
+    // El token leído sigue disponible en memoria si la migración del almacenamiento falla.
   }
+  return token
 }
 
 let tokenActual = leerToken()
@@ -20,6 +28,7 @@ export function guardarToken(token: string | null) {
   try {
     if (token) sessionStorage.setItem(CLAVE_TOKEN, token)
     else sessionStorage.removeItem(CLAVE_TOKEN)
+    sessionStorage.removeItem(CLAVE_TOKEN_ANTERIOR)
   } catch {
     // La sesión puede continuar en memoria si el navegador impide escribir en el almacenamiento.
   }

@@ -13,7 +13,8 @@ export interface TemaContextValor {
 }
 
 // La misma clave se lee en index.html para aplicar el tema antes del primer pintado.
-const CLAVE_ALMACENAMIENTO = 'tbf-tema'
+const CLAVE_ALMACENAMIENTO = 'bizon-tema'
+const CLAVE_ANTERIOR = 'tbf-tema'
 
 export const TemaContext = createContext<TemaContextValor | null>(null)
 
@@ -25,8 +26,12 @@ export function useTema(): TemaContextValor {
 
 export function leerPreferenciaGuardada(): PreferenciaTema {
   try {
-    const guardada = localStorage.getItem(CLAVE_ALMACENAMIENTO)
-    if (guardada === 'claro' || guardada === 'oscuro' || guardada === 'sistema') return guardada
+    const actual = localStorage.getItem(CLAVE_ALMACENAMIENTO)
+    const guardada = actual ?? localStorage.getItem(CLAVE_ANTERIOR)
+    if (guardada === 'claro' || guardada === 'oscuro' || guardada === 'sistema') {
+      if (actual === null) guardarPreferencia(guardada)
+      return guardada
+    }
   } catch {
     // almacenamiento no disponible (modo privado, etc.): se usa el tema del sistema
   }
@@ -36,6 +41,7 @@ export function leerPreferenciaGuardada(): PreferenciaTema {
 export function guardarPreferencia(preferencia: PreferenciaTema): void {
   try {
     localStorage.setItem(CLAVE_ALMACENAMIENTO, preferencia)
+    localStorage.removeItem(CLAVE_ANTERIOR)
   } catch {
     // sin almacenamiento la preferencia igual funciona, solo que no se recuerda al recargar
   }

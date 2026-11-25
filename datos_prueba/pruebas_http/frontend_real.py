@@ -127,7 +127,7 @@ class Navegador:
     def salir(self):
         self.boton("Cerrar sesión")
         self.texto("Inicia sesión", "h1")
-        self.esperar("sessionStorage.getItem('tbf-token') === null", "JWT eliminado")
+        self.esperar("sessionStorage.getItem('bizon-token') === null && sessionStorage.getItem('tbf-token') === null", "JWT eliminado")
 
 
 def esperar_recurso(leer):
@@ -222,6 +222,16 @@ def probar(navegador, api, motor, clave):
     n.texto("Usuario o contraseña incorrectos.", "[role='alert']")
     n.entrar("verificador.frontend", clave, "Tiendas")
     n.texto("Bizon", "aside")
+    n.evaluar("""
+        sessionStorage.setItem('tbf-token', sessionStorage.getItem('bizon-token'));
+        sessionStorage.removeItem('bizon-token');
+        localStorage.setItem('tbf-tema', 'oscuro');
+        localStorage.removeItem('bizon-tema');
+    """)
+    n.comando("Page.reload")
+    n.texto("Tiendas", "h1")
+    n.esperar("Boolean(sessionStorage.getItem('bizon-token')) && sessionStorage.getItem('tbf-token') === null", "La sesión previa sigue vigente")
+    n.esperar("document.documentElement.dataset.tema === 'oscuro' && localStorage.getItem('bizon-tema') === 'oscuro' && localStorage.getItem('tbf-tema') === null", "La preferencia anterior se conserva")
     n.boton("Nueva tienda")
     for selector, valor in {
         "#ruc": "20765432123", "#giro": "Bodega", "#razon_social": "Rosendo S.A.C.",
@@ -333,10 +343,10 @@ def probar(navegador, api, motor, clave):
     n.texto("Cronograma de tu compra en cuotas", "main")
     n.texto("Mis estados de cuenta", "main")
     n.esperar("!document.querySelector('main').innerText.includes('Nora Navegador')", "El titular solo ve sus datos")
-    n.evaluar("sessionStorage.setItem('tbf-token', 'expirado-de-prueba')")
+    n.evaluar("sessionStorage.setItem('bizon-token', 'expirado-de-prueba')")
     n.comando("Page.reload")
     n.texto("Inicia sesión", "h1")
-    n.esperar("sessionStorage.getItem('tbf-token') === null", "El 401 invalida el JWT guardado")
+    n.esperar("sessionStorage.getItem('bizon-token') === null", "El 401 invalida el JWT guardado")
 
     resultado_limpieza = operar_demo(limpiar=True, motor_db=motor)
     assert "retirados" in resultado_limpieza

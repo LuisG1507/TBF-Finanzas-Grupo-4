@@ -18,7 +18,7 @@
       ;(function () {
         var preferencia = 'sistema'
         try {
-          var guardada = localStorage.getItem('tbf-tema')
+          var guardada = localStorage.getItem('bizon-tema') ?? localStorage.getItem('tbf-tema')
           if (guardada === 'claro' || guardada === 'oscuro') preferencia = guardada
         } catch (error) {
           // almacenamiento no disponible: se sigue con el tema del sistema

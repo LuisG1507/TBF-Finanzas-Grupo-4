@@ -26,26 +26,25 @@ export default function App() {
       <SesionProvider>
         <Router>
           <Routes>
-              <Route path="/login" element={<Login />} />
+            <Route path="/login" element={<Login />} />
 
-              {/* Administrador del sistema */}
-              <Route path="/admin-sistema/tiendas" element={soloPara('ADMIN_SIS', <Tiendas />)} />
+            {/* Administrador del sistema */}
+            <Route path="/admin-sistema/tiendas" element={soloPara('ADMIN_SIS', <Tiendas />)} />
 
-              {/* Administrador del negocio */}
-              <Route path="/admin-negocio" element={soloPara('ADMIN_NEG', <Dashboard />)} />
-              <Route path="/admin-negocio/productos" element={soloPara('ADMIN_NEG', <Productos />)} />
-              <Route path="/admin-negocio/clientes" element={soloPara('ADMIN_NEG', <Clientes />)} />
-              <Route path="/admin-negocio/compras/nueva" element={soloPara('ADMIN_NEG', <NuevaCompra />)} />
-              <Route path="/admin-negocio/pagos/nuevo" element={soloPara('ADMIN_NEG', <RegistrarPago />)} />
-              <Route path="/admin-negocio/estados-cuenta" element={soloPara('ADMIN_NEG', <EstadosCuenta />)} />
+            {/* Administrador del negocio */}
+            <Route path="/admin-negocio" element={soloPara('ADMIN_NEG', <Dashboard />)} />
+            <Route path="/admin-negocio/productos" element={soloPara('ADMIN_NEG', <Productos />)} />
+            <Route path="/admin-negocio/clientes" element={soloPara('ADMIN_NEG', <Clientes />)} />
+            <Route path="/admin-negocio/compras/nueva" element={soloPara('ADMIN_NEG', <NuevaCompra />)} />
+            <Route path="/admin-negocio/pagos/nuevo" element={soloPara('ADMIN_NEG', <RegistrarPago />)} />
+            <Route path="/admin-negocio/estados-cuenta" element={soloPara('ADMIN_NEG', <EstadosCuenta />)} />
 
-              {/* Cliente */}
-              <Route path="/cliente/mi-cuenta" element={soloPara('CLIENTE', <MiCuenta />)} />
+            {/* Cliente */}
+            <Route path="/cliente/mi-cuenta" element={soloPara('CLIENTE', <MiCuenta />)} />
 
-              {/* Página de pruebas contra el backend real (sin sesión) */}
-              <Route path="/dev/calculadora" element={<CalculadoraTasas />} />
+            {import.meta.env.DEV && <Route path="/dev/calculadora" element={<CalculadoraTasas />} />}
 
-              <Route path="*" element={<Navigate to="/login" replace />} />
+            <Route path="*" element={<Navigate to="/login" replace />} />
           </Routes>
         </Router>
       </SesionProvider>
