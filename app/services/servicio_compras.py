@@ -17,6 +17,7 @@ Cómo se calcula una compra
 
 Todo se limita a la tienda de quien llama. Cada operación deja constancia en la bitácora.
 """
+from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import date, datetime, time, timedelta
 from decimal import Decimal
@@ -212,8 +213,14 @@ def capital_pendiente(db: Session, id_cliente: int, moneda_destino: str) -> Deci
         select(Compra).where(Compra.cliente_id == id_cliente, Compra.estado == EstadoCompra.VIGENTE)
         .options(selectinload(Compra.cuotas), selectinload(Compra.condicion).selectinload(CondicionCredito.moneda))
     )
+    return sumar_capital_pendiente(compras, moneda_destino)
+
+
+def sumar_capital_pendiente(compras: Iterable[Compra], moneda_destino: str) -> Decimal:
     total = Decimal(0)
     for c in compras:
+        if c.estado != EstadoCompra.VIGENTE:
+            continue
         if c.modalidad == ModalidadCompra.CUOTAS:
             capital = sum((q.amortizacion for q in c.cuotas if q.estado != EstadoCuota.PAGADA), Decimal(0))
         else:
@@ -379,6 +386,15 @@ def registrar(db: Session, tienda_id: int, datos: CompraCrear, actor: UsuarioAct
 
 def obtener(db: Session, tienda_id: int, id_compra: int) -> CompraRespuesta:
     return _respuesta_de_compra(_compra_de_tienda(db, tienda_id, id_compra))
+
+
+def listar_propias(db: Session, tienda_id: int, cliente_id: int, limite: int, desplazamiento: int) -> list[CompraRespuesta]:
+    consulta = (
+        select(Compra).join(Compra.cliente)
+        .where(Cliente.tienda_id == tienda_id, Compra.cliente_id == cliente_id)
+        .options(*_opciones_de_carga()).order_by(Compra.fecha_hora_compra.desc(), Compra.id_compra.desc())
+    )
+    return [_respuesta_de_compra(compra) for compra in db.scalars(consulta.limit(limite).offset(desplazamiento))]
 
 
 def listar(

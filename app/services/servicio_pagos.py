@@ -1,10 +1,11 @@
-from datetime import date, datetime, time, timezone
+from datetime import date, datetime, time
 from decimal import Decimal
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models import Bitacora, Cliente, CondicionCredito, Cuota, EstadoCuenta, Pago, Usuario
+from app.core.tiempo import ZONA_LIMA, ahora_lima
+from app.models import Bitacora, Cliente, CondicionCredito, Cuota, EstadoCuenta, EstadoCuentaDetalle, Pago, Usuario
 from app.models.enumeraciones import (
     AccionBitacora,
     EntidadBitacora,
@@ -12,6 +13,7 @@ from app.models.enumeraciones import (
     EstadoCuentaEstado,
     EstadoCuota,
     ModalidadCompra,
+    TipoItemEstadoCuenta,
 )
 from app.services.finance import finance_pagos as pagos
 from app.services.finance.finance_tasas import TipoTasa
@@ -32,7 +34,7 @@ def _condicion_vigente(sesion: Session, cliente_id: int, fecha: date) -> Condici
     condicion = sesion.scalars(
         select(CondicionCredito)
         .where(CondicionCredito.cliente_id == cliente_id, CondicionCredito.vigente_desde <= fecha)
-        .order_by(CondicionCredito.vigente_desde.desc())
+        .order_by(CondicionCredito.vigente_desde.desc(), CondicionCredito.id_condicion.desc())
     ).first()
     if condicion is None:
         raise ErrorPago(409, "El cliente no tiene una condicion de credito vigente")
@@ -56,14 +58,24 @@ def calcular_exigible(
 ):
     """Deuda exigible del estado de cuenta a la fecha de pago. Sin monto, se asume el pago exacto."""
     estado = _estado_de_tienda(sesion, id_estado_cuenta, tienda_id)
+    if estado.estado == EstadoCuentaEstado.PAGADO:
+        raise ErrorPago(409, "El estado de cuenta ya fue pagado")
     condicion = _condicion_vigente(sesion, estado.cliente_id, estado.fecha_pago)
+    return estado, liquidar_estado(estado, condicion, fecha_pago, monto)
+
+
+def liquidar_estado(
+    estado: EstadoCuenta, condicion: CondicionCredito, fecha_pago: date,
+    monto: Decimal | None = None, *, interes_del_corte: Decimal | None = None,
+) -> pagos.ResultadoPago:
+    """Aplica la liquidación pactada a un corte, también para reconstruir una fecha anterior al pago."""
     tipo = TipoTasa(condicion.tipo_tasa_mora.value)
     tipo_comp = TipoTasa(condicion.tipo_tasa_comp.value)
 
     def procesar(monto_pagado: Decimal):
         return pagos.procesar_pago(
             capital=estado.total_capital,
-            interes_comp=estado.total_interes_comp,
+            interes_comp=estado.total_interes_comp if interes_del_corte is None else interes_del_corte,
             portes=CERO,
             seguro=CERO,
             fecha_vencimiento=estado.fecha_pago,
@@ -81,7 +93,7 @@ def calcular_exigible(
 
     if monto is None:
         monto = procesar(Decimal("0.01")).total_exigible
-    return estado, procesar(monto)
+    return procesar(monto)
 
 
 def registrar_pago(
@@ -89,9 +101,12 @@ def registrar_pago(
 ):
     """Registra la cancelacion completa de un estado de cuenta: mora -> interes compensatorio -> capital.
     Rechaza pagos parciales y devuelve el excedente; no adelanta cuotas futuras."""
+    cliente = select(Cliente.id_cliente).join(Cliente.estados_cuenta).where(EstadoCuenta.id_estado_cuenta == id_estado_cuenta)
+    if tienda_id is not None:
+        cliente = cliente.where(Cliente.tienda_id == tienda_id)
+    if sesion.scalar(cliente.with_for_update(of=Cliente)) is None:
+        raise ErrorPago(404, "El estado de cuenta no existe")
     estado, resultado = calcular_exigible(sesion, id_estado_cuenta, fecha_pago, monto_pagado, tienda_id)
-    if estado.estado == EstadoCuentaEstado.PAGADO:
-        raise ErrorPago(409, "El estado de cuenta ya fue pagado")
     if sesion.get(Usuario, usuario_id) is None:
         raise ErrorPago(404, "El usuario que registra el pago no existe")
     if not resultado.aceptado:
@@ -102,12 +117,12 @@ def registrar_pago(
             "faltante": str(resultado.total_exigible - monto_pagado),
         })
 
-    ahora = datetime.now(timezone.utc)
+    ahora = ahora_lima()
     pago = Pago(
         cliente_id=estado.cliente_id,
         usuario_id=usuario_id,
         estado_cuenta_id=estado.id_estado_cuenta,
-        fecha_hora_pago=ahora if fecha_pago == ahora.date() else datetime.combine(fecha_pago, time(0, 0), tzinfo=timezone.utc),
+        fecha_hora_pago=ahora if fecha_pago == ahora.date() else datetime.combine(fecha_pago, time.min, ZONA_LIMA),
         monto_pagado=resultado.monto_aplicado,  # solo lo aplicado a la deuda; el excedente se devuelve
         monto_mora_aplicado=resultado.aplicado_mora,
         monto_interes_comp_aplicado=resultado.aplicado_interes_comp,
@@ -131,6 +146,18 @@ def registrar_pago(
                 compra.estado = EstadoCompra.CANCELADA
         elif detalle.compra is not None and detalle.compra.modalidad == ModalidadCompra.FIN_DE_MES:
             detalle.compra.estado = EstadoCompra.CANCELADA
+
+    if resultado.dias_mora > 0:
+        orden = max((d.orden for d in estado.detalles), default=0) + 1
+        estado.detalles.append(EstadoCuentaDetalle(
+            tipo_item=TipoItemEstadoCuenta.INT_MORATORIO, fecha_referencia=fecha_pago,
+            dias_transcurridos=resultado.dias_mora, tasa_aplicada=resultado.tasa_mora_pct, monto=resultado.interes_mora, orden=orden,
+        ))
+        if resultado.interes_comp_atraso > 0:
+            estado.detalles.append(EstadoCuentaDetalle(
+                tipo_item=TipoItemEstadoCuenta.INT_COMPENSATORIO, fecha_referencia=fecha_pago,
+                dias_transcurridos=resultado.dias_mora, monto=resultado.interes_comp_atraso, orden=orden + 1,
+            ))
 
     sesion.flush()
     sesion.add(Bitacora(

@@ -9,6 +9,7 @@ from app.api.v1.endpoints import (
     endpoints_finanzas,
     endpoints_pagos,
     endpoints_productos,
+    endpoints_resumen,
     endpoints_tiendas,
 )
 
@@ -23,3 +24,4 @@ router.include_router(endpoints_compras.router)
 router.include_router(endpoints_estados_cuenta.router)
 router.include_router(endpoints_pagos.router)
 router.include_router(endpoints_finanzas.router)
+router.include_router(endpoints_resumen.router)
