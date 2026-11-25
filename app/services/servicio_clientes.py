@@ -326,9 +326,17 @@ def historial_condiciones(db: Session, tienda_id: int, id_cliente: int) -> list[
 
 
 def dar_de_baja(db: Session, tienda_id: int, id_cliente: int, actor: UsuarioActual) -> ClienteRespuesta:
-    cliente = _cliente_de_tienda(db, tienda_id, id_cliente)
+    from app.services.moneda import PEN
+    from app.services.servicio_compras import capital_pendiente
+
+    cliente = _cliente_de_tienda(db, tienda_id, id_cliente, bloquear=True)
     if not cliente.activo:
         raise _conflicto("El cliente ya está dado de baja.")
+    condicion = condicion_vigente(cliente)
+    moneda = condicion.moneda.codigo_iso if condicion is not None else PEN
+    pendiente = capital_pendiente(db, id_cliente, moneda)
+    if pendiente > 0:
+        raise _conflicto(f"El cliente tiene deuda pendiente ({moneda} {pendiente}) y no se puede dar de baja.")
     cliente.activo = False
     servicio_bitacora.registrar(db, actor.id_usuario, EntidadBitacora.CLIENTE, cliente.id_cliente, AccionBitacora.BAJA, {"documento": f"{cliente.tipo_documento} {cliente.numero_documento}"})
     db.commit()

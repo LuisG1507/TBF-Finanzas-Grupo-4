@@ -77,12 +77,15 @@ def _resumen(estado: EstadoCuenta, hoy: date) -> EstadoCuentaResumen:
 
 def _detalle(detalle: EstadoCuentaDetalle) -> EstadoCuentaDetalleRespuesta:
     compra, cuota = _compra_del_detalle(detalle), detalle.cuota
+    concepto = CONCEPTOS[detalle.tipo_item]
+    if detalle.tipo_item == TipoItemEstadoCuenta.INT_COMPENSATORIO and compra is None and detalle.dias_transcurridos:
+        concepto = "Intereses compensatorios por atraso"
     return EstadoCuentaDetalleRespuesta(
         id_detalle_ec=detalle.id_detalle_ec,
         compra_id=compra.id_compra if compra is not None else None,
         cuota_id=detalle.cuota_id,
         tipo_item=detalle.tipo_item,
-        concepto=CONCEPTOS[detalle.tipo_item],
+        concepto=concepto,
         fecha_referencia=detalle.fecha_referencia,
         fecha_hora_compra=compra.fecha_hora_compra.astimezone(ZONA_LIMA) if compra is not None else None,
         dias_transcurridos=detalle.dias_transcurridos,
@@ -204,7 +207,9 @@ def _guardar_estado(
     )
 
 
-def generar(db: Session, tienda_id: int, usuario_id: int, anio: int, mes: int) -> list[EstadoCuentaResumen]:
+def generar(
+    db: Session, tienda_id: int, usuario_id: int, anio: int, mes: int, *, clientes_objetivo: list[int] | None = None,
+) -> list[EstadoCuentaResumen]:
     inicio = date(anio, mes, 1)
     ahora = ahora_lima()
     if inicio > ahora.date():
@@ -216,8 +221,12 @@ def generar(db: Session, tienda_id: int, usuario_id: int, anio: int, mes: int) -
         select(Cliente.id_cliente).where(Cliente.tienda_id == tienda_id, Cliente.activo.is_(True))
         .order_by(Cliente.id_cliente).with_for_update()
     )
+    if clientes_objetivo is not None:
+        consulta_clientes = consulta_clientes.where(Cliente.id_cliente.in_(clientes_objetivo))
     clientes = list(db.scalars(consulta_clientes))
     consulta_mes = _consulta(tienda_id).where(EstadoCuenta.anio == anio, EstadoCuenta.mes == mes)
+    if clientes_objetivo is not None:
+        consulta_mes = consulta_mes.where(EstadoCuenta.cliente_id.in_(clientes))
     existentes = set(db.execute(
         select(EstadoCuenta.cliente_id, EstadoCuenta.fecha_corte, EstadoCuenta.fecha_pago)
         .join(EstadoCuenta.cliente).where(Cliente.tienda_id == tienda_id, EstadoCuenta.anio == anio, EstadoCuenta.mes == mes)
