@@ -43,6 +43,7 @@ from app.services import ciclo_credito, servicio_bitacora, servicio_clientes
 from app.services.finance import finance_amortizacion as amortizacion
 from app.services.finance.finance_amortizacion import PlanFrances
 from app.services.finance.finance_tasas import DECIMALES_MONTO, TipoTasa, redondear
+from app.services.finance.finance_tcea import calcular_tcea_pct
 from app.services.moneda import PEN, convertir
 
 PERIODO_DE_PAGO_DIAS = 30  # las cuotas son mensuales (meses de 30 días)
@@ -100,6 +101,19 @@ def _cliente_resumen(c: Cliente) -> ClienteResumenCompra:
     return ClienteResumenCompra(id_cliente=c.id_cliente, nombre=f"{c.nombres} {c.apellidos}", documento=f"{c.tipo_documento} {c.numero_documento}")
 
 
+def _tcea_compra(
+    capital: Decimal, fecha_hora_compra: datetime, cronograma: list[CuotaRespuesta],
+    fecha_primer_pago: date, total: Decimal,
+) -> Decimal | None:
+    fecha_compra = fecha_hora_compra.astimezone(ZONA_LIMA).date()
+    pagos = [(c.fecha_vencimiento, c.monto_cuota) for c in cronograma] or [(fecha_primer_pago, total)]
+    flujos = [(ciclo_credito.dias_30_360(fecha_compra, fecha), monto) for fecha, monto in pagos]
+    # Una compra de importe cero, por redondeo a céntimos, carece de una tasa anual definida.
+    if capital <= 0 or total <= 0:
+        return None
+    return calcular_tcea_pct(capital, flujos)
+
+
 def _respuesta_de_borrador(b: _Borrador) -> CompraRespuesta:
     cronograma = []
     if b.plan is not None:
@@ -133,6 +147,7 @@ def _respuesta_de_borrador(b: _Borrador) -> CompraRespuesta:
         fecha_primer_pago=b.fecha_primer_pago,
         total_intereses=b.total_a_pagar - b.monto_total,
         total_a_pagar=b.total_a_pagar,
+        tcea_pct=_tcea_compra(b.monto_total, b.fecha_hora, cronograma, b.fecha_primer_pago, b.total_a_pagar),
         cronograma=cronograma,
         credito=CreditoRespuesta(
             limite_credito=b.limite, capital_pendiente=b.capital_pendiente, credito_disponible=b.credito_disponible, excede_limite=b.excede_limite
@@ -150,6 +165,13 @@ def _respuesta_de_compra(compra: Compra) -> CompraRespuesta:
     cuotas = sorted(compra.cuotas, key=lambda q: q.numero_cuota)
     total = _total_a_pagar(compra)
     moneda = compra.condicion.moneda
+    cronograma = [
+        CuotaRespuesta(
+            numero=q.numero_cuota, fecha_vencimiento=q.fecha_vencimiento, saldo_inicial=q.saldo_inicial, interes=q.interes,
+            amortizacion=q.amortizacion, monto_cuota=q.monto_cuota, saldo_final=q.saldo_final, estado=q.estado,
+        )
+        for q in cuotas
+    ]
     return CompraRespuesta(
         id_compra=compra.id_compra,
         estado=compra.estado,
@@ -176,13 +198,8 @@ def _respuesta_de_compra(compra: Compra) -> CompraRespuesta:
         fecha_primer_pago=compra.fecha_primer_pago,
         total_intereses=total - compra.monto_total,
         total_a_pagar=total,
-        cronograma=[
-            CuotaRespuesta(
-                numero=q.numero_cuota, fecha_vencimiento=q.fecha_vencimiento, saldo_inicial=q.saldo_inicial, interes=q.interes,
-                amortizacion=q.amortizacion, monto_cuota=q.monto_cuota, saldo_final=q.saldo_final, estado=q.estado,
-            )
-            for q in cuotas
-        ],
+        tcea_pct=_tcea_compra(compra.monto_total, compra.fecha_hora_compra, cronograma, compra.fecha_primer_pago, total),
+        cronograma=cronograma,
     )
 
 

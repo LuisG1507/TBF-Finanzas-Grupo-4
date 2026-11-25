@@ -113,4 +113,6 @@ Mayor diferencia en las 3 filas comparables: 0.0046.
 .venv\Scripts\python.exe datos_prueba\verificar_casos.py --solo FR-02 FR-03
 ```
 
-`verificar_casos.py` sin argumentos corre los 29 ejercicios de clase (69 valores) y termina con código 1 si alguno no coincide.
+`verificar_casos.py` sin argumentos corre los 29 ejercicios de clase y dos casos de TCEA (71 valores en total). Termina con código 1 si alguno no coincide.
+
+Para una compra de S/ 300 el 15 de setiembre con tasa efectiva mensual de 3 %, la tasa equivalente teórica es 42.5760887 %. Al usar los flujos programados a céntimos, la TCEA es 42.5891343 % para el pago único de S/ 303.27 y 42.5650862 % para las cuotas de S/ 107.21, S/ 107.21 y S/ 107.22. En ambos casos, descontar esos pagos a su TCEA devuelve el capital original a céntimos.
