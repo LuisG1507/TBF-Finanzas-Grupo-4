@@ -135,7 +135,7 @@ export function Tiendas() {
             </tbody>
           </table>
         </div>
-        {carga.datos && visibles.length === 0 && <p className={tabla.vacio}>Ninguna tienda coincide con «{consulta}».</p>}
+        {carga.datos && visibles.length === 0 && <p className={tabla.vacio}>{consulta.trim() ? <>Ninguna tienda coincide con «{consulta}».</> : 'Todavía no hay tiendas. Da de alta la primera con «Nueva tienda».'}</p>}
       </Tarjeta>
 
       {modalAbierto && (

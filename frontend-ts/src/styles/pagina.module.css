@@ -61,6 +61,23 @@
   color: var(--color-texto-secundario);
 }
 
+/* Título de una sección de la página que agrupa varias tarjetas */
+.tituloSeccion {
+  margin-top: var(--espacio-3);
+}
+
+.tituloSeccion h2 {
+  font-size: 19px;
+  font-weight: 650;
+  letter-spacing: -0.015em;
+}
+
+.tituloSeccion p {
+  margin-top: 4px;
+  font-size: 13.5px;
+  color: var(--color-texto-secundario);
+}
+
 .pila {
   display: flex;
   flex-direction: column;

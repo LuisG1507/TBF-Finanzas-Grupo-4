@@ -161,7 +161,10 @@ export function MiCuenta() {
         </Modal>
       )}
 
-      <Tarjeta><TarjetaEncabezado titulo="Mis estados de cuenta" descripcion="Abre un estado para revisar sus compras, cuotas e intereses." /></Tarjeta>
+      <div className={pagina.tituloSeccion}>
+        <h2>Mis estados de cuenta</h2>
+        <p>Abre un estado para revisar sus compras, cuotas e intereses.</p>
+      </div>
       <EstadoConsulta {...estados} />
       {estados.datos?.length === 0 && <Tarjeta><p className={tabla.vacio}>Todavía no se han emitido estados de cuenta.</p></Tarjeta>}
       {estados.datos && <TarjetasEstadosCuenta estados={estados.datos} ruta="/mi-cuenta/estados-cuenta" />}

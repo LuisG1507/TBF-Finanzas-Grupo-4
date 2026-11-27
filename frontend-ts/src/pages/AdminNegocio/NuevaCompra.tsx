@@ -140,6 +140,7 @@ export function NuevaCompra() {
         <div className={pagina.columna}>
           <Tarjeta>
             <TarjetaEncabezado titulo="Cliente" />
+            <div className={pagina.pila}>
             <Campo etiqueta="¿Quién compra?" ayuda="Solo aparecen los clientes con crédito activo en esta tienda." htmlFor="cliente">
               <select
                 id="cliente"
@@ -165,6 +166,7 @@ export function NuevaCompra() {
               <input id="fecha-compra" type="datetime-local" className="campo-entrada" value={fechaCompra} disabled={accion.ocupado}
                 onChange={(evento) => { setFechaCompra(evento.target.value); setSimulacion(null) }} />
             </Campo>
+            </div>
             <ul className={styles.condiciones}>
               <li>
                 <Icono nombre="calendario" tamano={15} /> Corte el día {condicion.dia_corte}

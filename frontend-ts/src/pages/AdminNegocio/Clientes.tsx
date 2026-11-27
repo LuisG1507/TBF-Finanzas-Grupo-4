@@ -128,14 +128,15 @@ export function Clientes() {
           <Buscador valor={consulta} onCambiar={setConsulta} etiqueta="Buscar por nombre o documento" />
         </div>
         <div className={tabla.envoltura}>
-          <table className={[tabla.tabla, tabla.amplia].join(' ')}>
+          <table className={[tabla.tabla, tabla.amplia, tabla.muyAmplia].join(' ')}>
             <colgroup>
-              <col style={{ width: '26%' }} />
               <col style={{ width: '19%' }} />
-              <col style={{ width: '19%' }} />
-              <col style={{ width: '12%' }} />
-              <col style={{ width: '11%' }} />
               <col style={{ width: '13%' }} />
+              <col style={{ width: '15%' }} />
+              <col style={{ width: '10%' }} />
+              <col style={{ width: '10%' }} />
+              <col style={{ width: '9%' }} />
+              <col style={{ width: '24%' }} />
             </colgroup>
             <thead>
               <tr>
@@ -145,6 +146,7 @@ export function Clientes() {
                 <th className={tabla.numerica}>Límite</th>
                 <th>Corte / pago</th>
                 <th>Estado</th>
+                <th className={tabla.columnaAcciones}>Acciones</th>
               </tr>
             </thead>
             <tbody>
@@ -182,7 +184,9 @@ export function Clientes() {
                     </td>
                     <td>
                       <Insignia texto={cliente.activo ? 'Activo' : 'Dado de baja'} tono={cliente.activo ? 'exito' : 'neutro'} />
-                      <div className={tabla.grupoInsignias}>
+                    </td>
+                    <td>
+                      <div className={tabla.celdaAcciones}>
                         <Boton variante="fantasma" tamano="pequeno" onClick={() => setClienteHistorial(cliente)}>Historial</Boton>
                         {cliente.activo && (
                           <Boton variante="fantasma" tamano="pequeno" onClick={() => { accion.limpiarError(); setClienteCondicion(cliente); setModalAbierto(true) }}>
@@ -200,7 +204,7 @@ export function Clientes() {
             </tbody>
           </table>
         </div>
-        {carga.datos && visibles.length === 0 && <p className={tabla.vacio}>Ningún cliente coincide con «{consulta}».</p>}
+        {carga.datos && visibles.length === 0 && <p className={tabla.vacio}>{consulta.trim() ? <>Ningún cliente coincide con «{consulta}».</> : 'Todavía no hay clientes. Regístralos con «Nuevo cliente».'}</p>}
       </Tarjeta>
 
       {clienteHistorial && (

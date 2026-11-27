@@ -82,6 +82,8 @@
 .herramientas {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
+  margin-left: auto;
   gap: var(--espacio-4);
   flex-wrap: wrap;
 }
