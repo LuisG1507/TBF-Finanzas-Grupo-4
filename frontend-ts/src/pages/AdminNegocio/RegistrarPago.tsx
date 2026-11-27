@@ -19,7 +19,7 @@ import styles from './RegistrarPago.module.css'
 
 const SUBTITULO = 'El pago debe cubrir todo lo adeudado: no se aceptan pagos parciales y el excedente se devuelve.'
 
-/** Orden en que se aplica un pago (Anexo A del enunciado). */
+/** Orden en que se aplica un pago: mora, interés compensatorio y capital. */
 const PRELACION = ['Interés moratorio', 'Interés compensatorio', 'Capital']
 
 export function RegistrarPago() {
@@ -234,16 +234,16 @@ export function RegistrarPago() {
 
         <div className={pagina.columna}>
           <Tarjeta tono="suave">
-            <TarjetaEncabezado titulo="¿Por qué no hay pagos parciales?" />
+            <TarjetaEncabezado titulo="Un solo cobro, cuentas claras" />
             <p className={styles.explicacion}>
-              El enunciado del curso no permite pagos parciales de una deuda en su fecha de pago. La mora no nace de pagar una parte, sino de
-              pagar tarde: si el cliente paga después de lo pactado, ese día debe cubrir lo adeudado completo más la mora acumulada. Si
-              entrega de más, el excedente se le devuelve: no se adelantan cuotas futuras.
+              Cada estado de cuenta se cancela completo en un solo pago, así ningún saldo queda a medias y sabes de un vistazo quién está al
+              día. Si el cliente llega tarde, el total ya suma la mora de los días de atraso. Si entrega de más, Bizon te dice cuánto vuelto
+              darle; ese dinero no se adelanta a cuotas futuras.
             </p>
           </Tarjeta>
 
           <Tarjeta>
-            <TarjetaEncabezado titulo="Orden de aplicación del pago" descripcion="Prelación exigida por el Anexo A." />
+            <TarjetaEncabezado titulo="Orden de aplicación del pago" descripcion="Bizon reparte cada pago en este orden, para que nada quede pendiente." />
             <ol className={styles.prelacion}>
               {PRELACION.map((concepto, indice) => (
                 <li key={concepto}>

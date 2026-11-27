@@ -16,7 +16,7 @@ class _Base(BaseModel):
 
 
 class TiendaCrear(_Base):
-    """Alta de una tienda, junto con las credenciales de su administrador (enunciado, punto 1)."""
+    """Alta de una tienda, junto con las credenciales de su administrador."""
 
     ruc: str = Field(pattern=_PATRON_RUC, description="11 dígitos", examples=["20512345678"])
     razon_social: str = Field(min_length=1, max_length=200, examples=["Bodega Don Rosendo S.A.C."])
