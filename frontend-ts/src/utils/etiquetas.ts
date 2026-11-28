@@ -22,8 +22,8 @@ export const ESTADO_CUENTA: Record<EstadoCuentaEstado, Presentacion> = {
 }
 
 export const ESTADO_COMPRA: Record<EstadoCompra, Presentacion> = {
-  VIGENTE: { texto: 'Vigente', tono: 'neutro' },
-  CANCELADA: { texto: 'Cancelada', tono: 'exito' },
+  VIGENTE: { texto: 'Por pagar', tono: 'neutro' },
+  CANCELADA: { texto: 'Pagada', tono: 'exito' },
   ANULADA: { texto: 'Anulada', tono: 'peligro' },
 }
 

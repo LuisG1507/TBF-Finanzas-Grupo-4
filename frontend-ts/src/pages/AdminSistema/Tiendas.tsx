@@ -84,7 +84,7 @@ export function Tiendas() {
           <Buscador valor={consulta} onCambiar={setConsulta} etiqueta="Buscar por nombre, RUC o giro" />
         </div>
         <div className={tabla.envoltura}>
-          <table className={tabla.tabla}>
+          <table className={[tabla.tabla, tabla.amplia].join(' ')}>
             <colgroup>
               <col style={{ width: '31%' }} />
               <col style={{ width: '14%' }} />
@@ -135,7 +135,7 @@ export function Tiendas() {
             </tbody>
           </table>
         </div>
-        {carga.datos && visibles.length === 0 && <p className={tabla.vacio}>Ninguna tienda coincide con «{consulta}».</p>}
+        {carga.datos && visibles.length === 0 && <p className={tabla.vacio}>{consulta.trim() ? <>Ninguna tienda coincide con «{consulta}».</> : 'Todavía no hay tiendas. Da de alta la primera con «Nueva tienda».'}</p>}
       </Tarjeta>
 
       {modalAbierto && (

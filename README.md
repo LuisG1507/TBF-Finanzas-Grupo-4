@@ -64,7 +64,10 @@ Desde la raíz del repositorio, ejecuta las pruebas de integración. Cada una le
 .venv\Scripts\python.exe -m datos_prueba.pruebas_http.flujo_completo
 .venv\Scripts\python.exe -m datos_prueba.pruebas_http.bloque_a
 .venv\Scripts\python.exe -m datos_prueba.pruebas_http.frontend_real
+.venv\Scripts\python.exe -m datos_prueba.pruebas_http.flujo_pagos_navegador
 ```
+
+El flujo de pagos en Chrome cobra una deuda vencida con mora: comprueba los días de atraso, el rechazo del pago incompleto, el excedente devuelto, lo que queda guardado (pago, estado y bitácora), lo que ve el cliente antes y después, y el menú en el teléfono.
 
 El flujo completo aplica las migraciones desde cero y recorre los tres roles. Incluye la compra del 15 de setiembre, el corte del 20, el cronograma francés, el pago puntual, el pago tardío y la consulta del titular.
 

@@ -30,6 +30,14 @@
   opacity: 0.45;
 }
 
+/* El primario desactivado se ve gris, no como un verde lavado que parece roto */
+.primario:disabled {
+  background: var(--color-superficie-hundida);
+  color: var(--color-texto-terciario);
+  box-shadow: none;
+  opacity: 1;
+}
+
 .primario {
   background: var(--color-acento-solido);
   color: var(--color-sobre-acento);

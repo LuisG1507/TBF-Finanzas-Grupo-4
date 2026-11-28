@@ -143,10 +143,12 @@ export function Productos() {
                       </div>
                     </td>
                     <td>
+                      <div className={tabla.estadoConAccion}>
                       <Insignia texto={producto.activo ? 'Activo' : 'Dado de baja'} tono={producto.activo ? 'exito' : 'neutro'} />
                       <Boton variante="fantasma" tamano="pequeno" disabled={accion.ocupado} onClick={() => alternarProducto(producto)}>
                         {producto.activo ? 'Dar de baja' : 'Reactivar'}
                       </Boton>
+                      </div>
                     </td>
                   </tr>
                 )
@@ -154,7 +156,7 @@ export function Productos() {
             </tbody>
           </table>
         </div>
-        {carga.datos && visibles.length === 0 && <p className={tabla.vacio}>Ningún producto coincide con «{consulta}».</p>}
+        {carga.datos && visibles.length === 0 && <p className={tabla.vacio}>{consulta.trim() ? <>Ningún producto coincide con «{consulta}».</> : 'Todavía no hay productos. Agrégalos con «Nuevo producto».'}</p>}
       </Tarjeta>
 
       {catalogo && (

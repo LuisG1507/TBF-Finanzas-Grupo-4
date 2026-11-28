@@ -11,7 +11,7 @@ import { useSesion } from '../../contexts/sesion'
 import styles from './Login.module.css'
 
 const VENTAJAS: { icono: NombreIcono; texto: string }[] = [
-  { icono: 'personas', texto: 'Límite de crédito, día de corte y día de pago para cada cliente.' },
+  { icono: 'personas', texto: 'Límite de crédito, cierre de mes y fecha de pago para cada cliente.' },
   { icono: 'calendario', texto: 'Compras a fin de mes o en cuotas, con su cronograma.' },
   { icono: 'documento', texto: 'Estados de cuenta con la mora identificada aparte.' },
 ]
@@ -59,6 +59,10 @@ export function Login() {
                 </li>
               ))}
             </ul>
+            <p className={styles.sello}>
+              <Icono nombre="candado" tamano={16} />
+              Acceso privado por tienda. Cada cálculo queda registrado y se puede revisar.
+            </p>
           </div>
         </section>
 

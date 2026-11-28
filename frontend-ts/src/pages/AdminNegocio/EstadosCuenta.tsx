@@ -14,6 +14,7 @@ import type { EstadoCuenta, EstadoCuentaEstado } from '../../types/dominio'
 import { hoyLima, plural } from '../../utils/formato'
 import tabla from '../../components/ui/Tabla.module.css'
 import formulario from '../../styles/formulario.module.css'
+import styles from './EstadosCuenta.module.css'
 
 type Filtro = 'TODOS' | EstadoCuentaEstado
 
@@ -45,7 +46,7 @@ export function EstadosCuenta() {
     const [anio, mes] = periodo.split('-').map(Number)
     void accion.ejecutar(async () => {
       const emitidos = await pedir<EstadoCuenta[]>('/estados-cuenta/generar', { method: 'POST', cuerpo: { anio, mes } })
-      setMensaje(emitidos.length ? plural(emitidos.length, 'estado de cuenta emitido para el mes', 'estados de cuenta emitidos para el mes') : 'El mes aún no tiene cortes listos para emitir.')
+      setMensaje(emitidos.length ? plural(emitidos.length, 'estado de cuenta emitido para el mes', 'estados de cuenta emitidos para el mes') : 'Ese mes todavía no tiene cierres listos para emitir.')
       carga.recargar()
       cerrar()
     })
@@ -54,25 +55,25 @@ export function EstadosCuenta() {
   return (
     <Shell
       titulo="Estados de cuenta"
-      subtitulo="El listado que se genera en cada fecha de corte, con la mora identificada aparte."
-      acciones={
-        <>
-          <Campo etiqueta="Filtrar por estado" ayuda="Vencidos muestra los estados que ya pasaron su fecha de pago y siguen pendientes.">
-            <Segmentado etiquetaGrupo="Estado de cuenta" opciones={FILTROS} valor={filtro} onCambiar={setFiltro} />
-          </Campo>
-          <Boton icono="mas" onClick={() => { accion.limpiarError(); setGenerando(true) }}>Generar estados</Boton>
-        </>
-      }
+      subtitulo="Lo que cada cliente debe pagar en el mes, con la mora identificada aparte."
+      acciones={<Boton icono="mas" onClick={() => { accion.limpiarError(); setGenerando(true) }}>Generar estados</Boton>}
     >
+      <div className={styles.barraFiltro}>
+        <Segmentado etiquetaGrupo="Filtrar por estado" opciones={FILTROS} valor={filtro} onCambiar={setFiltro} />
+        <p className={styles.notaFiltro}>
+          {carga.datos ? plural(carga.datos.length, 'estado de cuenta', 'estados de cuenta') + ' · ' : ''}
+          Vencidos son los que pasaron su fecha de pago sin cancelarse.
+        </p>
+      </div>
       {mensaje && <Aviso tono="info">{mensaje}</Aviso>}
       <EstadoConsulta {...carga} />
       {carga.datos?.length === 0 && <Tarjeta><p className={tabla.vacio}>{SIN_RESULTADOS[filtro]}</p></Tarjeta>}
       {carga.datos && <TarjetasEstadosCuenta estados={carga.datos} ruta="/estados-cuenta" />}
       {generando && (
-        <Modal titulo="Generar estados de cuenta" descripcion="Se emiten los cortes del mes que ya se cumplieron." onCerrar={cerrar}>
+        <Modal titulo="Generar estados de cuenta" descripcion="Se emiten los estados de los clientes cuyo día de cierre ya pasó." onCerrar={cerrar}>
           <form className={formulario.formulario} onSubmit={generar}>
             <EstadoConsulta error={accion.error} />
-            <Campo etiqueta="Mes de corte" ayuda="Elige el mes del cierre de compras, aunque la fecha de pago caiga al mes siguiente." obligatorio htmlFor="periodo-corte">
+            <Campo etiqueta="Mes de cierre" ayuda="El mes en que se cerraron las compras, aunque el pago venza al mes siguiente." obligatorio htmlFor="periodo-corte">
               <input id="periodo-corte" name="periodo" type="month" className="campo-entrada"
                 max={hoyLima().slice(0, 7)} defaultValue={hoyLima().slice(0, 7)} required />
             </Campo>

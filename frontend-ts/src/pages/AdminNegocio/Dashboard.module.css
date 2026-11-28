@@ -48,8 +48,7 @@
 .cifra {
   display: flex;
   flex-direction: column;
-  align-self: stretch;
-  min-height: 300px;
+  gap: var(--espacio-2);
 }
 
 .cifraCabecera {

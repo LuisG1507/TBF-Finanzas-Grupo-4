@@ -2,7 +2,8 @@
   Tokens de diseño. Hay dos temas: claro (por defecto) y oscuro.
   El tema activo lo marca <html data-tema="claro|oscuro"> (ver contexts/TemaContext.tsx).
 
-  Regla de color: un solo verde de acento, en tres pasos (fuerte / normal / suave).
+  Regla de color: un verde botella para la marca y las acciones; el verde esmeralda queda solo para
+  estados de éxito (pagado, al día). Fondo neutro cálido, sin degradados de color.
   Ámbar y rojo se usan únicamente para estados (por vencer, en mora, errores).
 */
 
@@ -14,59 +15,60 @@
   --fuente-mono: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, monospace;
 
   /* Escenario: el fondo de toda la página, con un degradado verde muy suave */
-  --color-fondo: #edf4f0;
-  --fondo-brillo:
-    radial-gradient(62rem 38rem at 6% -10%, rgba(116, 212, 167, 0.46), transparent 62%),
-    radial-gradient(48rem 30rem at 102% 2%, rgba(176, 231, 204, 0.55), transparent 60%),
-    radial-gradient(56rem 36rem at 58% 112%, rgba(190, 234, 213, 0.6), transparent 62%);
+  --color-fondo: #f3f3ef;
+  --fondo-brillo: none;
 
   /* Marco redondeado que contiene la barra lateral y el panel */
-  --color-marco: rgba(255, 255, 255, 0.58);
-  --color-marco-borde: rgba(255, 255, 255, 0.85);
-  --sombra-marco: 0 1px 0 rgba(255, 255, 255, 0.7) inset, 0 48px 96px -56px rgba(14, 62, 44, 0.42);
+  --color-marco: rgba(255, 255, 255, 0.72);
+  --color-marco-borde: rgba(20, 24, 22, 0.06);
+  --sombra-marco: 0 1px 0 rgba(255, 255, 255, 0.8) inset, 0 40px 80px -56px rgba(20, 24, 22, 0.3);
+
+  /* Ícono del logo */
+  --fondo-marca-icono: linear-gradient(150deg, #22a05a 0%, #166534 100%);
+  --color-marca-icono: #ffffff;
 
   /* Superficies */
   --color-superficie: #ffffff;
-  --color-superficie-alterna: #f4f8f5;
-  --color-superficie-hundida: #ecf2ee;
+  --color-superficie-alterna: #f6f7f4;
+  --color-superficie-hundida: #eef0eb;
   --color-superficie-elevada: #ffffff;
   --color-entrada: #ffffff;
-  --color-borde: rgba(15, 42, 30, 0.16);
-  --color-borde-suave: rgba(15, 42, 30, 0.075);
+  --color-borde: rgba(20, 24, 22, 0.15);
+  --color-borde-suave: rgba(20, 24, 22, 0.07);
 
   /* Texto */
-  --color-texto: #0f1a15;
-  --color-texto-secundario: #55635c;
-  --color-texto-terciario: #626f68;
+  --color-texto: #151a17;
+  --color-texto-secundario: #56605a;
+  --color-texto-terciario: #636c66;
 
   /* Acento: un solo verde */
-  --color-acento: #0f7553;
-  --color-acento-solido: #0f7553;
-  --color-acento-solido-hover: #0c6245;
+  --color-acento: #166534;
+  --color-acento-solido: #166534;
+  --color-acento-solido-hover: #14532d;
   --color-sobre-acento: #ffffff;
-  --color-acento-suave: #e1f3ea;
-  --color-acento-suave-hover: #d3ecdf;
-  --color-anillo: rgba(15, 117, 83, 0.26);
+  --color-acento-suave: #e8f0ea;
+  --color-acento-suave-hover: #dbe7de;
+  --color-anillo: rgba(22, 101, 52, 0.25);
 
   /* Tarjeta destacada (verde oscuro) */
-  --fondo-destacado: linear-gradient(155deg, #11503a 0%, #0c3a2b 52%, #0a2f23 100%);
+  --fondo-destacado: linear-gradient(160deg, #1a6b3a 0%, #14532d 55%, #103f23 100%);
   --color-destacado-texto: #ffffff;
   --color-destacado-texto-secundario: rgba(255, 255, 255, 0.76);
   --color-destacado-borde: rgba(255, 255, 255, 0.1);
   --color-destacado-relleno: rgba(255, 255, 255, 0.12);
-  --color-destacado-brillo: #9be5c5;
+  --color-destacado-brillo: #9ee6b8;
   --color-destacado-barra: rgba(255, 255, 255, 0.24);
 
   /* Tarjeta verde claro (cifra grande) */
-  --fondo-suave: linear-gradient(160deg, #e7f6ee 0%, #d4eee1 100%);
-  --color-suave-borde: rgba(15, 117, 83, 0.14);
-  --color-suave-texto: #0c3a2b;
-  --color-suave-texto-secundario: #2f5c4b;
-  --color-suave-pista: rgba(15, 117, 83, 0.16);
+  --fondo-suave: #ffffff;
+  --color-suave-borde: rgba(20, 24, 22, 0.07);
+  --color-suave-texto: #14301f;
+  --color-suave-texto-secundario: #4f5d54;
+  --color-suave-pista: rgba(22, 101, 52, 0.12);
 
   /* Estados: texto sobre su fondo suave (chips, avisos) */
-  --color-exito: #0b6446;
-  --color-exito-suave: #e1f3ea;
+  --color-exito: #047857;
+  --color-exito-suave: #d1fae5;
   --color-alerta: #874f00;
   --color-alerta-suave: #fcefd9;
   --color-peligro: #b3261e;
@@ -76,7 +78,7 @@
   --color-neutro-suave: #eef2ef;
 
   /* Estados: marcas de gráficos (segmentos, puntos) */
-  --color-marca-bien: #17916a;
+  --color-marca-bien: #10b981;
   --color-marca-aviso: #e0a13a;
   --color-marca-serio: #e27d4f;
   --color-marca-critico: #c9342e;
@@ -84,24 +86,26 @@
   /* Gráficos */
   --color-grafico-rejilla: rgba(15, 42, 30, 0.08);
   --color-grafico-eje: rgba(15, 42, 30, 0.2);
-  --color-grafico-barra: #a5dcc1;
-  --color-grafico-barra-activa: #0f7553;
+  --color-grafico-barra: #c3d8ca;
+  --color-grafico-barra-activa: #166534;
   --color-grafico-pista: rgba(15, 42, 30, 0.07);
   --color-grafico-pista-clave: rgba(15, 42, 30, 0.24);
-  --color-grafico-linea: #17916a;
+  --color-grafico-linea: #15803d;
 
-  /* Barra lateral: oscura en los dos temas, con vidrio esmerilado */
-  --color-barra: rgba(11, 26, 19, 0.9);
-  --color-barra-borde: rgba(255, 255, 255, 0.1);
-  --color-barra-texto: #eaf1ed;
-  --color-barra-texto-secundario: rgba(234, 241, 237, 0.64);
-  --color-barra-item-hover: rgba(255, 255, 255, 0.07);
-  --color-barra-item-activo: rgba(255, 255, 255, 0.12);
-  --color-barra-acento: #7ee2b8;
-  --sombra-barra: 0 28px 56px -32px rgba(6, 30, 20, 0.6);
+  /* Barra lateral: blanca en el tema claro, oscura en el oscuro */
+  --color-barra: #ffffff;
+  --color-barra-borde: rgba(20, 24, 22, 0.07);
+  --color-barra-texto: #151a17;
+  --color-barra-texto-secundario: #56605a;
+  --color-barra-item-hover: #f3f5f2;
+  --color-barra-item-activo: #e8f0ea;
+  --color-barra-item-activo-texto: #14532d;
+  --color-barra-acento: #166534;
+  --color-barra-brillo: rgba(255, 255, 255, 0.9);
+  --sombra-barra: 0 24px 48px -36px rgba(20, 24, 22, 0.28);
 
   /* Barra superior del teléfono (translúcida, se queda fija al desplazar) */
-  --color-barra-movil: rgba(240, 247, 243, 0.8);
+  --color-barra-movil: rgba(243, 243, 239, 0.85);
 
   /* Velo de los modales y del menú móvil */
   --color-velo: rgba(12, 26, 19, 0.38);
@@ -143,9 +147,10 @@
 
   --color-fondo: #060a08;
   --fondo-brillo:
-    radial-gradient(62rem 38rem at 6% -10%, rgba(32, 138, 96, 0.34), transparent 62%),
-    radial-gradient(48rem 30rem at 102% 2%, rgba(22, 98, 69, 0.26), transparent 60%),
-    radial-gradient(56rem 36rem at 58% 112%, rgba(16, 78, 56, 0.3), transparent 62%);
+    radial-gradient(62rem 38rem at 6% -10%, rgba(34, 120, 70, 0.18), transparent 62%);
+
+  --fondo-marca-icono: linear-gradient(150deg, #34c172 0%, #1a7a42 100%);
+  --color-marca-icono: #ffffff;
 
   --color-marco: rgba(255, 255, 255, 0.03);
   --color-marco-borde: rgba(255, 255, 255, 0.075);
@@ -209,6 +214,11 @@
   --color-grafico-linea: #45d298;
 
   --color-barra: rgba(24, 33, 28, 0.66);
+  --color-barra-texto: #eaf1ed;
+  --color-barra-texto-secundario: rgba(234, 241, 237, 0.64);
+  --color-barra-item-activo-texto: #ffffff;
+  --color-barra-acento: #7ee2b8;
+  --color-barra-brillo: rgba(255, 255, 255, 0.07);
   --color-barra-borde: rgba(255, 255, 255, 0.09);
   --color-barra-item-hover: rgba(255, 255, 255, 0.06);
   --color-barra-item-activo: rgba(255, 255, 255, 0.1);

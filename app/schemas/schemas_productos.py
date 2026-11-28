@@ -16,7 +16,7 @@ def _precio(**extra):
 
 
 class ProductoCrear(_Base):
-    """Alta de un producto o servicio (enunciado, punto 2)."""
+    """Alta de un producto o servicio."""
 
     codigo: str = Field(pattern=_PATRON_CODIGO, description="Único dentro de la tienda", examples=["ARR-001"])
     nombre: str = Field(min_length=1, max_length=200, examples=["Arroz Costeño 750 g"])
