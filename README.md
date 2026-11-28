@@ -78,3 +78,9 @@ Con la API local levantada, también puedes contrastar los 29 ejercicios de clas
 ```
 
 Desde `frontend-ts`, comprueba la compilación y el análisis de código con `npm run build` y `npm run lint`.
+
+## Demo desplegada
+
+El `Dockerfile` compila React y arranca la API con `app.web:app`. El frontend y `/api/v1` salen del mismo dominio. La comprobación de arranque está en `/healthz`. El proceso escucha en el puerto que indique `PORT`, con 8000 como valor inicial.
+
+Configura una base PostgreSQL de prueba en `URL_BASE_DATOS` y define `CLAVE_SECRETA`, `ADMIN_SISTEMA_USUARIO` y `ADMIN_SISTEMA_PASSWORD` como variables del servicio. Desde la imagen, ejecuta `python -m alembic upgrade head` y `python -m app.db.seeds` una vez al preparar la base. Después usa el administrador del sistema para crear las tiendas de prueba y asignar una cuenta de administrador a cada participante. Si creas **Bodega Don Rosendo**, `python -m app.db.demo` carga la historia y las cuentas de cliente descritas arriba.
