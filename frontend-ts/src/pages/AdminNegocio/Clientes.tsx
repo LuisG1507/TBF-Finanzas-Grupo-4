@@ -29,10 +29,10 @@ function nombreConMayuscula(dias: number): string {
   return `${nombre.charAt(0).toUpperCase()}${nombre.slice(1)} (${plural(dias, 'día', 'días')})`
 }
 
-/** "Nominal anual · cap. mensual" o "Efectiva anual". */
+/** "Nominal anual, capitalización mensual" o "Efectiva anual". */
 function describirTasa(tasa: TasaPactada): string {
   const base = TIPO_TASA[tasa.tipo] + ' ' + nombreDelPlazo(tasa.plazo_dias)
-  return tasa.capitalizacion_dias ? base + ' · cap. ' + nombreDelPlazo(tasa.capitalizacion_dias) : base
+  return tasa.capitalizacion_dias ? base + ', capitalización ' + nombreDelPlazo(tasa.capitalizacion_dias) : base
 }
 
 function leerTasa(datos: FormData, sufijo: 'comp' | 'mora', nombre: string) {
@@ -130,13 +130,13 @@ export function Clientes() {
         <div className={tabla.envoltura}>
           <table className={[tabla.tabla, tabla.amplia, tabla.muyAmplia].join(' ')}>
             <colgroup>
-              <col style={{ width: '19%' }} />
-              <col style={{ width: '13%' }} />
+              <col style={{ width: '18%' }} />
+              <col style={{ width: '12%' }} />
               <col style={{ width: '15%' }} />
-              <col style={{ width: '10%' }} />
-              <col style={{ width: '10%' }} />
               <col style={{ width: '9%' }} />
-              <col style={{ width: '24%' }} />
+              <col style={{ width: '13%' }} />
+              <col style={{ width: '10%' }} />
+              <col style={{ width: '23%' }} />
             </colgroup>
             <thead>
               <tr>
@@ -144,7 +144,7 @@ export function Clientes() {
                 <th>Tasa compensatoria</th>
                 <th>Tasa moratoria</th>
                 <th className={tabla.numerica}>Límite</th>
-                <th>Corte / pago</th>
+                <th>Ciclo mensual</th>
                 <th>Estado</th>
                 <th className={tabla.columnaAcciones}>Acciones</th>
               </tr>
@@ -180,7 +180,10 @@ export function Clientes() {
                     </td>
                     <td className={[tabla.numerica, tabla.fuerte].join(' ')}>{condicion ? formatearMonto(condicion.limite_credito, condicion.moneda.codigo_iso) : '—'}</td>
                     <td className={tabla.sinCorte}>
-                      {condicion ? 'Día ' + condicion.dia_corte + ' / día ' + condicion.dia_pago : '—'}
+                      {condicion ? <>
+                        <div>Cierra el día {condicion.dia_corte}</div>
+                        <div className={tabla.celdaSecundaria}>Paga hasta el {condicion.dia_pago}</div>
+                      </> : '—'}
                     </td>
                     <td>
                       <Insignia texto={cliente.activo ? 'Activo' : 'Dado de baja'} tono={cliente.activo ? 'exito' : 'neutro'} />
@@ -216,7 +219,7 @@ export function Clientes() {
               <strong>{formatearFecha(condicion.vigente_desde)} · {condicion.vigente_hasta ? 'hasta ' + formatearFecha(condicion.vigente_hasta) : 'Vigente'}</strong>
               <p>Compensatoria {formatearTasa(condicion.tasa_compensatoria.tasa_pct)} · {describirTasa(condicion.tasa_compensatoria)}</p>
               <p>Moratoria {formatearTasa(condicion.tasa_moratoria.tasa_pct)} · {describirTasa(condicion.tasa_moratoria)}</p>
-              <p>{formatearMonto(condicion.limite_credito, condicion.moneda.codigo_iso)} de límite · corte {condicion.dia_corte} a las {condicion.hora_corte.slice(0, 5)} · pago {condicion.dia_pago}</p>
+              <p>{formatearMonto(condicion.limite_credito, condicion.moneda.codigo_iso)} de límite · cierra el día {condicion.dia_corte} a las {condicion.hora_corte.slice(0, 5)} · paga hasta el día {condicion.dia_pago}</p>
             </div>
           ))}
         </Modal>
@@ -316,17 +319,17 @@ export function Clientes() {
                 <Campo etiqueta="Máximo de cuotas" ayuda="El mayor número de meses que se le puede ofrecer." obligatorio htmlFor="max_meses">
                   <input id="max_meses" name="max_meses" type="number" defaultValue={actual?.max_meses} min={1} max={120} step={1} inputMode="numeric" className="campo-entrada" required />
                 </Campo>
-                <Campo etiqueta="Día de corte" ayuda="Día del mes (1 a 28) en que se cierra su período de compras." obligatorio htmlFor="dia_corte">
+                <Campo etiqueta="Día de cierre (corte)" ayuda="Día del mes (1 a 28) en que se cierran sus compras: todo lo comprado hasta ese día se cobra en ese mes." obligatorio htmlFor="dia_corte">
                   <input id="dia_corte" name="dia_corte" type="number" defaultValue={actual?.dia_corte} min={1} max={28} step={1} inputMode="numeric" className="campo-entrada" required />
                 </Campo>
-                <Campo etiqueta="Día de pago" ayuda="Día del mes (1 a 28) en que se compromete a pagar." obligatorio htmlFor="dia_pago">
+                <Campo etiqueta="Día límite de pago" ayuda="Día del mes (1 a 28) hasta el que puede pagar sin mora." obligatorio htmlFor="dia_pago">
                   <input id="dia_pago" name="dia_pago" type="number" defaultValue={actual?.dia_pago} min={1} max={28} step={1} inputMode="numeric" className="campo-entrada" required />
                 </Campo>
               </div>
             </div>
 
             {clienteCondicion && <p className={formulario.seccionDescripcion}>Los cambios rigen desde {formatearFecha(hoyLima())}.</p>}
-            <Campo etiqueta="Hora de corte" ayuda="Hora de Lima." htmlFor="hora_corte">
+            <Campo etiqueta="Hora de cierre" ayuda="Hora de Lima. Las compras después de esta hora pasan al mes siguiente." htmlFor="hora_corte">
               <input id="hora_corte" name="hora_corte" type="time" className="campo-entrada" defaultValue={actual?.hora_corte.slice(0, 5) ?? '00:00'} />
             </Campo>
             <div className={formulario.acciones}>
@@ -358,7 +361,7 @@ function CamposDeTasa({ sufijo, nombreTasa, inicial }: CamposDeTasaProps) {
 
   return (
     <div className={formulario.rejilla2}>
-      <Campo etiqueta="Tipo de tasa" ayuda="Nominal: necesita una capitalización. Efectiva: ya la lleva incluida." obligatorio htmlFor={idTipo}>
+      <Campo etiqueta="Tipo de tasa" ayuda="Efectiva: el porcentaje que realmente se cobra en el plazo. Nominal: se convierte según su capitalización." obligatorio htmlFor={idTipo}>
         <select
           id={idTipo}
           name={idTipo}

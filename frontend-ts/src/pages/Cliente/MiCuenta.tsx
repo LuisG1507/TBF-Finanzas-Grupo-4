@@ -46,7 +46,7 @@ export function MiCuenta() {
       <section className={pagina.indicadores3} aria-label="Resumen de tu crédito">
         <TarjetaKpi
           destacada
-          etiqueta="Próximo pago"
+          etiqueta={posicion.situacion === 'EN_MORA' ? 'Pago vencido' : 'Próximo pago'}
           valor={montoProximo ? dinero(montoProximo) : '—'}
           icono="calendario"
           detalle={proximo ? (posicion.situacion === 'EN_MORA' ? 'Venció el ' : 'Vence el ') + formatearFecha(proximo) : 'No tienes pagos pendientes'}
@@ -74,9 +74,9 @@ export function MiCuenta() {
       <div className={pagina.mitades}>
         {proximo && montoProximo && (
           <Tarjeta>
-            <TarjetaEncabezado titulo="Detalle de tu próximo pago" />
+            <TarjetaEncabezado titulo={posicion.situacion === 'EN_MORA' ? 'Tu pago pendiente' : 'Detalle de tu próximo pago'} />
             <ListaDatos>
-              <FilaDato etiqueta="Fecha pactada" valor={formatearFecha(proximo)} />
+              <FilaDato etiqueta="Pagar hasta el" valor={formatearFecha(proximo)} />
               <FilaDato etiqueta="Total a pagar" valor={dinero(montoProximo)} enfasis />
               {Number(posicion.mora_acumulada) > 0 && (
                 <FilaDato etiqueta="Mora acumulada en tu cuenta" valor={dinero(posicion.mora_acumulada)} tono="peligro" />
@@ -92,8 +92,8 @@ export function MiCuenta() {
                 valor={formatearTasa(condicion.tasa_compensatoria.tasa_pct)} />
               <FilaDato etiqueta={'Tasa moratoria (' + TIPO_TASA[condicion.tasa_moratoria.tipo].toLowerCase() + ' ' + nombreDelPlazo(condicion.tasa_moratoria.plazo_dias) + ')'}
                 valor={formatearTasa(condicion.tasa_moratoria.tasa_pct)} />
-              <FilaDato etiqueta="Corte" valor={'Día ' + condicion.dia_corte + ', ' + condicion.hora_corte.slice(0, 5)} />
-              <FilaDato etiqueta="Día de pago" valor={'Día ' + condicion.dia_pago} />
+              <FilaDato etiqueta="Cierre de tus compras" valor={'Día ' + condicion.dia_corte + ' a las ' + condicion.hora_corte.slice(0, 5)} />
+              <FilaDato etiqueta="Pagas hasta el" valor={'Día ' + condicion.dia_pago + ' de cada mes'} />
               <FilaDato etiqueta="Máximo de cuotas" valor={plural(condicion.max_meses, 'cuota', 'cuotas')} />
             </ListaDatos>
           </Tarjeta>
@@ -167,7 +167,7 @@ export function MiCuenta() {
       </div>
       <EstadoConsulta {...estados} />
       {estados.datos?.length === 0 && <Tarjeta><p className={tabla.vacio}>Todavía no se han emitido estados de cuenta.</p></Tarjeta>}
-      {estados.datos && <TarjetasEstadosCuenta estados={estados.datos} ruta="/mi-cuenta/estados-cuenta" />}
+      {estados.datos && <TarjetasEstadosCuenta estados={estados.datos} ruta="/mi-cuenta/estados-cuenta" vistaCliente />}
     </Shell>
   )
 }

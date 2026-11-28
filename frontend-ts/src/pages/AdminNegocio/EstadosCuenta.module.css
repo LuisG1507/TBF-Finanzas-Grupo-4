@@ -109,6 +109,53 @@
   color: var(--color-peligro);
 }
 
+/* Barra de filtro sobre el listado */
+.barraFiltro {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-3) var(--espacio-5);
+  flex-wrap: wrap;
+}
+
+.notaFiltro {
+  font-size: 13px;
+  color: var(--color-texto-secundario);
+}
+
+/* Encabezado de cada mes del listado */
+.grupo {
+  display: flex;
+  align-items: baseline;
+  gap: var(--espacio-3);
+  margin-top: var(--espacio-3);
+  font-size: 16px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+.grupo:first-of-type {
+  margin-top: 0;
+}
+
+.grupo span {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-texto-terciario);
+}
+
+/* En la vista del cliente, el ícono de calendario ocupa el lugar del avatar */
+.iconoMes {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--color-acento-suave);
+  color: var(--color-acento);
+}
+
 @media (max-width: 600px) {
   .cabecera {
     padding: var(--espacio-4);

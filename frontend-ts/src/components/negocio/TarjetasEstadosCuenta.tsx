@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { Fragment, useState } from 'react'
 import { useConsulta } from '../../api/consultas'
 import type { EstadoCuenta, EstadoCuentaCompleto } from '../../types/dominio'
 import { ESTADO_CUENTA } from '../../utils/etiquetas'
@@ -16,13 +16,23 @@ function periodo(anio: number, mes: number): string {
   return `${nombre.charAt(0).toUpperCase()}${nombre.slice(1)} de ${anio}`
 }
 
-export function TarjetasEstadosCuenta({ estados, ruta }: { estados: EstadoCuenta[]; ruta: string }) {
+interface Props {
+  estados: EstadoCuenta[]
+  ruta: string
+  /** En la vista del cliente cada estado se titula con su mes, no con el nombre del propio cliente. */
+  vistaCliente?: boolean
+}
+
+export function TarjetasEstadosCuenta({ estados, ruta, vistaCliente }: Props) {
   const [expandidoId, setExpandidoId] = useState<number | null>()
   const seleccion = expandidoId === undefined ? estados[0]?.id_estado_cuenta : expandidoId
   const detalle = useConsulta<EstadoCuentaCompleto>(estados.some((e) => e.id_estado_cuenta === seleccion) ? ruta + '/' + seleccion : null)
   return (
     <>
-      {estados.map((estadoCuenta) => {
+      {estados.map((estadoCuenta, indice) => {
+        const mes = periodo(estadoCuenta.anio, estadoCuenta.mes)
+        const nuevoMes = indice === 0 || periodo(estados[indice - 1].anio, estados[indice - 1].mes) !== mes
+        const delMes = estados.filter((e) => e.anio === estadoCuenta.anio && e.mes === estadoCuenta.mes).length
         const nombre = estadoCuenta.cliente_nombre
         const moneda = estadoCuenta.moneda?.codigo_iso
         const expandido = seleccion === estadoCuenta.id_estado_cuenta
@@ -31,7 +41,14 @@ export function TarjetasEstadosCuenta({ estados, ruta }: { estados: EstadoCuenta
         const presentacion = ESTADO_CUENTA[estadoCuenta.estado]
 
         return (
-          <Tarjeta key={estadoCuenta.id_estado_cuenta} relleno="ninguno">
+          <Fragment key={estadoCuenta.id_estado_cuenta}>
+          {nuevoMes && !vistaCliente && (
+            <h3 className={styles.grupo}>
+              {mes}
+              <span>{delMes === 1 ? '1 estado de cuenta' : delMes + ' estados de cuenta'}</span>
+            </h3>
+          )}
+          <Tarjeta relleno="ninguno">
             <button
               type="button"
               className={styles.cabecera}
@@ -40,12 +57,15 @@ export function TarjetasEstadosCuenta({ estados, ruta }: { estados: EstadoCuenta
               onClick={() => setExpandidoId(expandido ? null : estadoCuenta.id_estado_cuenta)}
             >
               <span className={styles.quien}>
-                <Avatar nombre={nombre} />
+                {vistaCliente ? (
+                  <span className={styles.iconoMes} aria-hidden="true"><Icono nombre="calendario" tamano={18} /></span>
+                ) : (
+                  <Avatar nombre={nombre} />
+                )}
                 <span className={styles.quienTexto}>
-                  <span className={styles.nombre}>{nombre}</span>
+                  <span className={styles.nombre}>{vistaCliente ? mes : nombre}</span>
                   <span className={styles.fechas}>
-                    {periodo(estadoCuenta.anio, estadoCuenta.mes)} · corte {formatearFecha(estadoCuenta.fecha_corte)} · pago{' '}
-                    {formatearFecha(estadoCuenta.fecha_pago)}
+                    Compras hasta el {formatearFecha(estadoCuenta.fecha_corte)} · Pagar hasta el {formatearFecha(estadoCuenta.fecha_pago)}
                   </span>
                 </span>
               </span>
@@ -121,6 +141,7 @@ export function TarjetasEstadosCuenta({ estados, ruta }: { estados: EstadoCuenta
               </div>
             )}
           </Tarjeta>
+          </Fragment>
         )
       })}
     </>

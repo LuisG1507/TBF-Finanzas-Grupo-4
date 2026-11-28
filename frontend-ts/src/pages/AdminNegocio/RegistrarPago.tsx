@@ -13,11 +13,11 @@ import { Tarjeta, TarjetaEncabezado } from '../../components/ui/Tarjeta'
 import type { Cliente, EstadoCuenta } from '../../types/dominio'
 import { nombreCompleto } from '../../utils/texto'
 import { ESTADO_CUENTA } from '../../utils/etiquetas'
-import { formatearFecha, formatearMonto, hoyLima } from '../../utils/formato'
+import { formatearFecha, formatearMonto, hoyLima, sumarMontos } from '../../utils/formato'
 import pagina from '../../styles/pagina.module.css'
 import styles from './RegistrarPago.module.css'
 
-const SUBTITULO = 'El pago debe cubrir todo lo adeudado: no se aceptan pagos parciales y el excedente se devuelve.'
+const SUBTITULO = 'Cobra el estado de cuenta de un cliente: Bizon calcula la mora del día y te dice cuánto vuelto dar.'
 
 /** Orden en que se aplica un pago: mora, interés compensatorio y capital. */
 const PRELACION = ['Interés moratorio', 'Interés compensatorio', 'Capital']
@@ -51,6 +51,8 @@ export function RegistrarPago() {
   const interesMora = exigible?.interes_mora ?? '0'
   const totalAPagar = exigible?.total_exigible
   const tieneMora = Number(interesMora) > 0
+  // Diferencia entre lo recibido y el total, en céntimos: negativa si falta, positiva si hay vuelto.
+  const diferencia = !pagoAceptado && monto !== '' && totalAPagar ? sumarMontos([monto, -Number(totalAPagar)]) : null
 
   function reiniciar() {
     setMonto('')
@@ -123,43 +125,16 @@ export function RegistrarPago() {
           {!estadoCuenta ? (
             <div className={styles.bloque}>
               <Aviso tono="info" titulo={`${nombreCompleto(cliente)} no tiene nada por pagar`}>
-                Los cobros aparecen aquí cuando se emite su estado de cuenta, en la fecha de corte posterior a una compra. Un cliente recién
+                Los cobros aparecen aquí cuando se emite su estado de cuenta, en el cierre de mes siguiente a una compra. Un cliente recién
                 registrado todavía no tiene compras.
               </Aviso>
             </div>
           ) : (
             <>
-              <div className={styles.estadoCuenta}>
-                <div className={styles.estadoCuentaCabecera}>
-                  <p className={styles.estadoCuentaTitulo}>Estado de cuenta</p>
-                  {pagoAceptado ? (
-                    <Insignia texto={ESTADO_CUENTA.PAGADO.texto} tono={ESTADO_CUENTA.PAGADO.tono} />
-                  ) : (
-                    <Insignia texto={ESTADO_CUENTA[estadoCuenta.estado].texto} tono={ESTADO_CUENTA[estadoCuenta.estado].tono} />
-                  )}
-                </div>
-                <ListaDatos>
-                  <FilaDato etiqueta="Fecha de corte" valor={formatearFecha(estadoCuenta.fecha_corte)} />
-                  <FilaDato etiqueta="Fecha de pago pactada" valor={formatearFecha(estadoCuenta.fecha_pago)} />
-                  <FilaDato
-                    etiqueta="Días de mora"
-                    valor={exigible ? String(exigible.dias_mora) : '—'}
-                    tono={tieneMora ? 'peligro' : undefined}
-                  />
-                  <FilaDato etiqueta="Capital" valor={dinero(estadoCuenta.total_capital)} separada />
-                  <FilaDato etiqueta="Interés compensatorio" valor={dinero(estadoCuenta.total_interes_comp)} />
-                  {exigible && Number(exigible.interes_comp_atraso) > 0 && (
-                    <FilaDato etiqueta="Compensatorio por atraso" valor={dinero(exigible.interes_comp_atraso)} />
-                  )}
-                  <FilaDato etiqueta="Interés moratorio" valor={dinero(interesMora)} tono={tieneMora ? 'peligro' : undefined} />
-                  <FilaDato etiqueta="Total a pagar" valor={totalAPagar ? dinero(totalAPagar) : '—'} enfasis separada />
-                </ListaDatos>
-              </div>
-
               <div className={styles.bloque}>
                 <Campo
                   etiqueta="Fecha en que paga"
-                  ayuda="Si es posterior a la fecha de pago pactada, el sistema calcula los días de mora y suma el interés moratorio al total."
+                  ayuda="Si paga después de la fecha pactada, el total suma la mora de esos días."
                   obligatorio
                   htmlFor="fecha_pago"
                 >
@@ -177,10 +152,37 @@ export function RegistrarPago() {
                 </Campo>
               </div>
 
+              <div className={styles.estadoCuenta}>
+                <div className={styles.estadoCuentaCabecera}>
+                  <p className={styles.estadoCuentaTitulo}>Estado de cuenta</p>
+                  {pagoAceptado ? (
+                    <Insignia texto={ESTADO_CUENTA.PAGADO.texto} tono={ESTADO_CUENTA.PAGADO.tono} />
+                  ) : (
+                    <Insignia texto={ESTADO_CUENTA[estadoCuenta.estado].texto} tono={ESTADO_CUENTA[estadoCuenta.estado].tono} />
+                  )}
+                </div>
+                <ListaDatos>
+                  <FilaDato etiqueta="Compras hasta el" valor={formatearFecha(estadoCuenta.fecha_corte)} />
+                  <FilaDato etiqueta="Debía pagar hasta el" valor={formatearFecha(estadoCuenta.fecha_pago)} />
+                  <FilaDato
+                    etiqueta="Días de mora"
+                    valor={exigible ? String(exigible.dias_mora) : '—'}
+                    tono={tieneMora ? 'peligro' : undefined}
+                  />
+                  <FilaDato etiqueta="Capital" valor={dinero(estadoCuenta.total_capital)} separada />
+                  <FilaDato etiqueta="Interés compensatorio" valor={dinero(estadoCuenta.total_interes_comp)} />
+                  {exigible && Number(exigible.interes_comp_atraso) > 0 && (
+                    <FilaDato etiqueta="Compensatorio por atraso" valor={dinero(exigible.interes_comp_atraso)} />
+                  )}
+                  <FilaDato etiqueta="Interés moratorio" valor={dinero(interesMora)} tono={tieneMora ? 'peligro' : undefined} />
+                  <FilaDato etiqueta="Total a pagar" valor={totalAPagar ? dinero(totalAPagar) : '—'} enfasis separada />
+                </ListaDatos>
+              </div>
+
               <div className={styles.bloque}>
                 <Campo
                   etiqueta={moneda === 'USD' ? 'Monto recibido (US$)' : 'Monto recibido (S/)'}
-                  ayuda="Debe cubrir el total a pagar, que ya incluye la mora. Si el cliente entrega más, el sistema indica cuánto devolverle."
+                  ayuda="Lo que te entrega el cliente. Debe cubrir el total a pagar."
                   obligatorio
                   htmlFor="monto"
                 >
@@ -200,6 +202,22 @@ export function RegistrarPago() {
                     }}
                   />
                 </Campo>
+                {!pagoAceptado && totalAPagar && (
+                  <div className={styles.ayudaMonto}>
+                    <Boton variante="suave" tamano="pequeno" disabled={accion.ocupado}
+                      onClick={() => { setMonto(totalAPagar); accion.limpiarError() }}>
+                      Recibir el total exacto
+                    </Boton>
+                    {diferencia !== null && (
+                      <p role="status" className={[styles.diferencia,
+                        diferencia < 0 ? styles.diferenciaFalta : diferencia > 0 ? styles.diferenciaVuelto : ''].join(' ')}>
+                        {diferencia < 0 ? 'Faltan ' + dinero(-diferencia) + ' para cubrir el total.'
+                          : diferencia > 0 ? 'Vuelto para el cliente: ' + dinero(diferencia)
+                            : 'Monto exacto, sin vuelto.'}
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
 
               <div className={[styles.bloque, pagina.pila].join(' ')}>

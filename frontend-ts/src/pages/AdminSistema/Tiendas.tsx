@@ -84,7 +84,7 @@ export function Tiendas() {
           <Buscador valor={consulta} onCambiar={setConsulta} etiqueta="Buscar por nombre, RUC o giro" />
         </div>
         <div className={tabla.envoltura}>
-          <table className={tabla.tabla}>
+          <table className={[tabla.tabla, tabla.amplia].join(' ')}>
             <colgroup>
               <col style={{ width: '31%' }} />
               <col style={{ width: '14%' }} />

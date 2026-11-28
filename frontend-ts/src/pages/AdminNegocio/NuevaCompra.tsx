@@ -169,10 +169,10 @@ export function NuevaCompra() {
             </div>
             <ul className={styles.condiciones}>
               <li>
-                <Icono nombre="calendario" tamano={15} /> Corte el día {condicion.dia_corte}
+                <Icono nombre="calendario" tamano={15} /> Cierra el día {condicion.dia_corte}
               </li>
               <li>
-                <Icono nombre="billete" tamano={15} /> Paga el día {condicion.dia_pago}
+                <Icono nombre="billete" tamano={15} /> Paga hasta el día {condicion.dia_pago}
               </li>
               <li>
                 <Icono nombre="documento" tamano={15} /> Hasta {plural(condicion.max_meses, 'cuota', 'cuotas')}

@@ -72,3 +72,27 @@
     padding: var(--espacio-4);
   }
 }
+
+/* Atajo para cobrar el total y lectura en vivo de lo que falta o del vuelto */
+.ayudaMonto {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-3);
+  flex-wrap: wrap;
+  margin-top: var(--espacio-3);
+}
+
+.diferencia {
+  font-size: 13.5px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-texto-secundario);
+}
+
+.diferenciaFalta {
+  color: var(--color-peligro);
+}
+
+.diferenciaVuelto {
+  color: var(--color-exito);
+}

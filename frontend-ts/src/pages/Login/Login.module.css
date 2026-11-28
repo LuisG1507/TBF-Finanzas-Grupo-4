@@ -26,9 +26,14 @@
   box-shadow: var(--sombra-marco);
 }
 
-/* ---------- Panel de presentación: mismo vidrio oscuro que la barra lateral ---------- */
+/* ---------- Panel de presentación: verde de la marca ---------- */
 
 .presentacion {
+  --color-barra: var(--fondo-destacado);
+  --color-barra-borde: rgba(255, 255, 255, 0.14);
+  --color-barra-texto: #ffffff;
+  --color-barra-texto-secundario: rgba(255, 255, 255, 0.8);
+  --color-barra-acento: #bff0cf;
   position: relative;
   display: flex;
   flex-direction: column;
@@ -51,7 +56,7 @@
   content: '';
   position: absolute;
   inset: 0;
-  background: radial-gradient(30rem 22rem at 112% 112%, rgba(63, 211, 154, 0.34), transparent 62%);
+  background: radial-gradient(30rem 22rem at 112% 112%, rgba(255, 255, 255, 0.1), transparent 62%);
   pointer-events: none;
 }
 
@@ -68,10 +73,10 @@
   width: 42px;
   height: 42px;
   border-radius: 13px;
-  background: linear-gradient(150deg, #3fd39a 0%, #14835d 100%);
-  color: #04130c;
+  background: #ffffff;
+  color: #166534;
   box-shadow:
-    0 8px 18px -8px rgba(63, 211, 154, 0.75),
+    0 8px 18px -8px rgba(34, 160, 90, 0.6),
     0 1px 0 rgba(255, 255, 255, 0.35) inset;
 }
 
@@ -219,4 +224,23 @@
   .titulo {
     font-size: 26px;
   }
+}
+
+/* Sello de confianza al pie del panel de presentación */
+.sello {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: var(--espacio-6);
+  padding-top: var(--espacio-4);
+  border-top: 1px solid var(--color-barra-borde);
+  font-size: 13px;
+  color: var(--color-barra-texto-secundario);
+}
+
+.sello svg {
+  flex: none;
+  color: var(--color-barra-acento);
 }
