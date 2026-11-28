@@ -1,0 +1,12 @@
+.git
+.env
+.env.*
+**/.env
+**/.env.*
+.idea
+.venv
+**/__pycache__
+frontend-ts/.idea
+frontend-ts/_respaldo
+frontend-ts/dist
+frontend-ts/node_modules
